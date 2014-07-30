@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>GGD3</title>
+        <script src="../lib/d3.js" charset="utf-8"></script>
+        <script src="../ggd3-0.0.1.js" charset="utf-8"></script>
+    </head>
+    <body>
+        <div id="chart"></div>
+        <script>
+            var spec = {
+                "selector": "#chart",
+                "coord": "cartesian",
+                "width": 400,
+                "height": 400,
+                "padding": {"left":30, "top":10, "bottom":30, "right":10},
+                "data": [
+                    {
+                        "name": "data",
+                        "values": [
+                            {"x": 0.5, "y": 0.5, "img":"data/ffox.png"},
+                            {"x": 1.5, "y": 1.5, "img":"data/gimp.png"},
+                            {"x": 2.5, "y": 2.5, "img":"data/7zip.png"}
+                        ]
+                    }
+                ],
+                "scales": [
+                    {"name": "x", "domain": [0, 3], "range": "width"},
+                    {"name": "y", "domain": [0, 3], "range": "height"}
+                ],
+                "axes": [
+                    {"type": "x", "scale": "x"},
+                    {"type": "y", "scale": "y"}
+                ],
+                "layers": [
+                    {
+                        "aes": null,
+                        "data": "data",
+                        "geom": "circle",
+                        "stat": null,
+                        "posadj": null
+                    }
+                ]
+            };
+
+            ggd3.ggd3.render(spec);
+
+        </script>
+    </body>
+</html>
