@@ -7,12 +7,92 @@ var ggd3 = ggd3 || {};
 ggd3.util = (function () {
 	var isUndefined = function (val) {
 			return typeof val === 'undefined';
+		},
+		countObjKeys = function (obj) {
+			var size = 0, key;
+			for (key in obj) {
+				if (obj.hasOwnProperty(key)) size++;
+			}
+			return size;
 		};
 
 	return {
-		isUndefined: isUndefined
+		isUndefined: isUndefined,
+		countObjKeys: countObjKeys
 	}
 })();
+
+
+// ------------------
+// Datasets
+// ------------------
+
+ggd3.Dataset = (function() {
+	var dataset = function(spec) {
+		spec = spec || {};
+		if (ggd3.util.isUndefined(spec.name)) throw "The dataset name must be defined";
+		this.dataset = {
+			name: spec.name,
+			values: spec.values || null
+		};
+		//if (s) ggd3.extend(this.dataset, s);
+	};
+
+	var prototype = dataset.prototype;
+
+	prototype.name = function (val) {
+		if (!arguments.length) return this.dataset.name;
+		this.dataset.name = val;
+		return this;
+	};
+
+	prototype.values = function(val) {
+		if (!arguments.length) return this.dataset.values;
+		// ToDo: set as object, ggd3 values (or either)?
+		this.dataset.values = val;
+		return this;
+	};
+
+	return dataset;
+})();
+
+ggd3.dataset = function(s) {
+  return new ggd3.Dataset(s);
+};
+
+ggd3.Data = (function() {
+	var datasets = function(s) {
+		var i, dataset;
+		this.datasets = {};
+		if (s) {
+			for (i = 0; i < s.length; i++) {
+				dataset = ggd3.dataset(s[i]);
+				this.datasets[dataset.name()] = dataset;
+			}
+		}
+	};
+
+	var prototype = datasets.prototype;
+
+	prototype.dataset = function(datasetName, dataset) {
+		// ToDo: Get or set dataset
+		if (arguments.length < 1) throw "dataset function needs datasetName argument.";
+		if (arguments.length == 1) return this.datasets[datasetName];
+		// ToDo: set as object, ggd3 dataset (or either)?
+		this.datasets[datasetName] = ggd3.dataset(dataset);
+		return this;
+	};
+
+	prototype.count = function() {
+		return ggd3.util.countObjKeys(this.datasets);
+	};
+
+	return datasets;
+})();
+
+ggd3.datasets = function(s) {
+  return new ggd3.Data(s);
+};
 
 
 // ------------------
@@ -75,11 +155,12 @@ ggd3.Axes = (function() {
 	};
 
 	prototype.count = function() {
-		var size = 0, key;
-	    for (key in this.axes) {
-	        if (this.axes.hasOwnProperty(key)) size++;
-	    }
-	    return size;
+		return ggd3.util.countObjKeys(this.axes);
+		// var size = 0, key;
+	 //    for (key in this.axes) {
+	 //        if (this.axes.hasOwnProperty(key)) size++;
+	 //    }
+	 //    return size;
 	};
 
 	return axes;
@@ -379,6 +460,7 @@ ggd3.layers = function(s) {
   return new ggd3.Layers(s);
 };
 
+
 // ------------------
 // Plot
 // ------------------
@@ -400,7 +482,7 @@ ggd3.Plot = (function () {
 			width: spec.width || 500,
 			height: spec.height || 500,
 			padding: ggd3.padding(spec.padding || {}),
-			data: spec.data || [],
+			data: ggd3.datasets(spec.data || []),
 			// ToDo: automatically find co-ordinate system based on layers?
 			coord: spec.coord || "cartesian",
 			scales: ggd3.scales(spec.scales|| []),
@@ -440,6 +522,13 @@ ggd3.Plot = (function () {
 	prototype.coord = function (val) {
 		if (!arguments.length) return this.plot.coord;
 		this.plot.coord = val;
+		return this;
+	};
+
+	prototype.data = function (val) {
+		if (!arguments.length) return this.plot.data;
+		// ToDo: should val be obj or Datasets (or either)?
+		this.plot.data = val;
 		return this;
 	};
 
@@ -498,7 +587,9 @@ ggd3.plot = function(p) {
 ggd3.Renderer = (function (d3) {
 	var renderer = function(s) {
 		this.renderer = {
-			plotDef: s
+			plotDef: s,
+			xAxis: null,
+			yAxis: null
 		};
 	};
 
@@ -517,7 +608,59 @@ ggd3.Renderer = (function (d3) {
 					.attr("width", plotDef.width())
 					.attr("height", plotDef.height());
 
-		// Axes
+		// ToDo: if no domain set on axes, default to extent
+		// of data for appropriate aes across layers
+		this.setupXAxis();
+		this.setupYAxis();
+
+		this.drawAxes(plot);
+		this.drawLayers(plot);
+		
+	};
+
+	prototype.drawLayers = function (plotArea) {
+		var plotDef = this.plotDef(),
+			layerDefs = plotDef.layers().asArray(),
+			i, layerDef;
+
+		for (i = 0; i < layerDefs.length; i++) {
+			layerDef = layerDefs[i];
+
+			switch (layerDef.geom()) {
+				case "point":
+					break;
+			}
+  			this.drawPointLayer(plotArea, layerDef);
+			
+		}
+	};
+
+	prototype.drawPointLayer = function (plotArea, layerDef) {
+		// Draws points (e.g. circles) onto the plot area
+		var plotDef = this.plotDef(),
+			xField = layerDef.aesmappings().findByAes("x").field(),
+			yField = layerDef.aesmappings().findByAes("y").field(),
+			xScale = this.xAxis().scale(),
+			yScale = this.yAxis().scale(),
+			datasetName = layerDef.data(),
+			dataset = plotDef.data().dataset(datasetName),
+			values = dataset.values();
+
+		// ToDo: check aes mappings to see if axis x2 or y2 used instead
+		plotArea.selectAll(".dot")
+				.data(values)
+			.enter().append("circle")
+				.attr("class", "dot")
+				.attr("r", 3.5)
+				.attr("cx", function(d) { return xScale(d[xField]); })
+				.attr("cy", function(d) { return yScale(d[yField]); });
+		
+		//.style("fill", function(d) { return color(d.species); });
+	};
+
+	prototype.drawAxes = function (plot) {
+		var plotDef = this.plotDef();
+
 		switch (plotDef.coord()) {
 			case "cartesian":
 				// Need an x and y axis
@@ -542,15 +685,31 @@ ggd3.Renderer = (function (d3) {
 		}
 	};
 
-	prototype.xAxis = function () {
+	prototype.xAxis = function (val) {
+		if (!arguments.length) return this.renderer.xAxis;
+		this.renderer.xAxis = val;
+		return this;
+	};
+
+	prototype.yAxis = function (val) {
+		if (!arguments.length) return this.renderer.yAxis;
+		this.renderer.yAxis = val;
+		return this;
+	};
+
+	prototype.setupXAxis = function () {
 		// Produces D3 x axis
 		var plotDef = this.plotDef(),
 			axis = d3.svg.axis()
 				.orient("bottom"),
 			axisDef = this.plotDef().axes().axis("x") || {},
-			scaleDefRef = axisDef.scale(),
-			scaleDef = plotDef.scales().scale(scaleDefRef),
+			scaleRef = axisDef.scale(),
+			scaleDef = plotDef.scales().scale(scaleRef),
 			scale = this.scale(scaleDef);
+
+		// ToDo: determine if domain has been manually set on x axis
+		// ToDo: account for facets
+		//x.domain(d3.extent(data, function(d) { return d.sepalWidth; })).nice();
 
 		// X scale range is always width of plot area
 		// ToDo: account for facets
@@ -559,18 +718,22 @@ ggd3.Renderer = (function (d3) {
 
 		axis.ticks(5);
 
-		return axis;
+		this.xAxis(axis);
 	};
 
-	prototype.yAxis = function () {
+	prototype.setupYAxis = function () {
 		// Produces D3 y axis
 		var plotDef = this.plotDef(),
 			axis = d3.svg.axis()
 				.orient("left"),
 			axisDef = this.plotDef().axes().axis("y") || {},
-			scaleDefRef = axisDef.scale(),
-			scaleDef = plotDef.scales().scale(scaleDefRef),
+			scaleRef = axisDef.scale(),
+			scaleDef = plotDef.scales().scale(scaleRef),
 			scale = this.scale(scaleDef);
+
+		// ToDo: determine if domain has been manually set on y axis
+		// ToDo: account for facets
+		//y.domain(d3.extent(data, function(d) { return d.sepalLength; })).nice();
 
 		// Y scale range is always height of plot area
 		// ToDo: account for facets
@@ -579,7 +742,7 @@ ggd3.Renderer = (function (d3) {
 
 		axis.ticks(5);
 
-		return axis;
+		this.yAxis(axis);
 	};
 
 	prototype.scale = function (scaleDef) {
@@ -608,6 +771,46 @@ ggd3.Renderer = (function (d3) {
 ggd3.renderer = function(s) {
   return new ggd3.Renderer(s);
 };
+
+// ------------------
+// Data Helper
+// ------------------
+
+ggd3.dataHelper = (function (d3) {
+	var datatableMin = function (datatable, field) {
+			return d3.min(datatable, function (d) { return d[field]; });
+		},
+		datatableMax = function (datatable, field) {
+			return d3.max(datatable, function (d) { return d[field]; });
+		},
+		datatablesStat = function (datatables, field, stat) {
+			var statVal = null,
+				i, tmpStat;
+
+			switch (stat) {
+				case "min":
+				case "max":
+					for (i = 0; i < datatables.length; i++) {
+						tmpStat = stat === "min" ? datatableMin(datatables[i], field) : datatableMax(datatables[i], field);
+						if (!isNaN(tmpStat)) {
+							if (statVal == null) statVal = tmpStat;
+							statVal = stat === "min" ? Math.min(statVal, tmpStat) : Math.max(statVal, tmpStat);
+						}
+					}
+					break;
+				default:
+					throw "Can't get datatables stat, unknown stat " + stat;
+			}
+
+			return statVal;
+		};
+
+	return {
+		datatableMin: datatableMin,
+		datatableMax: datatableMax,
+		datatablesStat: datatablesStat
+	}
+})(d3);
 
 // ggd3.renderer = (function (d3) {
 // 	//

@@ -49,6 +49,18 @@ describe("Module: ggd3.Plot", function() {
 			expect(plot.coord()).toEqual("cartesian");
 		});
 
+		it("should initialise the plot with a data", function() {
+			var plot = ggd3.plot({
+				data: [
+					{
+						name: "myData"
+					}
+				]
+			});
+			expect(plot.data().count()).toEqual(1);
+			expect(plot.data().dataset("myData").name()).toEqual("myData");
+		});
+
 		it("should initialise the plot with a axis", function() {
 			var plot = ggd3.plot({
 				axes: [
