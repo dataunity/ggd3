@@ -214,9 +214,170 @@ ggd3.Padding = (function () {
 })();
 
 ggd3.padding = function(s) {
-  return new ggd3.Padding(s);
+	return new ggd3.Padding(s);
 };
 
+
+
+// ------------------
+// Aesthetic mappings
+// ------------------
+
+ggd3.AesMapping = (function () {
+	// Aesthetic mapping shows which variables are mapped to which
+	// aesthetics. For example, we might map weight to x position, 
+	// height to y position, and age to size. 
+	// 
+	// GGPlot:
+	// 		layer(aes(x = x, y = y, color = z))
+	// Ref [lg] 3.1.1
+	var aesmap = function(s) {
+		this.aesmap = {
+			aes: s.aes || null,
+			field: s.field || null
+		};
+		//if (s) ggd3.extend(this.aesmap, s);
+	};
+
+	var prototype = aesmap.prototype;
+
+	prototype.aes = function (val) {
+		if (!arguments.length) return this.aesmap.aes;
+		this.aesmap.aes = val;
+		return this;
+	};
+
+	prototype.field = function (val) {
+		if (!arguments.length) return this.aesmap.field;
+		this.aesmap.field = val;
+		return this;
+	};
+
+	return aesmap;
+})();
+
+ggd3.aesmapping = function(s) {
+  return new ggd3.AesMapping(s);
+};
+
+ggd3.AesMappings = (function () {
+	var aesmappings = function(spec) {
+		var i;
+		this.aesmappings = [];
+		for (i = 0; i < spec.length; i++) {
+			this.aesmappings.push(ggd3.aesmapping(spec[i]));
+		}
+	};
+
+	var prototype = aesmappings.prototype;
+
+	prototype.findByAes = function (aesName) {
+		// Finds an aesthetic mapping by aesthetic name
+		var mappings = this.aesmappings,
+			i, tmpAesmap;
+		for (i = 0; i < mappings.length; i++) {
+			tmpAesmap = mappings[i];
+			if (tmpAesmap.aes() === aesName) {
+				return tmpAesmap;
+			}
+		}
+		return null;
+	};
+
+	prototype.count = function () {
+		return this.aesmappings.length;
+	};
+
+	prototype.asArray = function () {
+		return this.aesmappings;
+	};
+
+	return aesmappings;
+})();
+
+ggd3.aesmappings = function(s) {
+  return new ggd3.AesMappings(s);
+};
+
+
+// ------------------
+// Layers
+// ------------------
+
+ggd3.Layer = (function () {
+	// Layers are responsible for creating the objects that we perceive on the plot. 
+	// A layer is composed of:
+	//  - data and aesthetic mapping,
+	//  - a statistical transformation (stat),
+	//  - a geometric object (geom), and
+	//  - a position adjustment
+	// 
+	// GGPlot:
+	// 		layer(aes(x = x, y = y, color = z), geom="line",
+	// 		stat="smooth")
+	// Ref [lg] 3.1
+	var layer = function(spec) {
+		this.layer = {
+			data: spec.data || null,
+			geom: spec.geom || null,
+			aesmappings: ggd3.aesmappings(spec.aesmappings || [])
+		};
+		//if (s) ggd3.extend(this.layer, s);
+	};
+
+	var prototype = layer.prototype;
+
+	prototype.data = function (val) {
+		if (!arguments.length) return this.layer.data;
+		this.layer.data = val;
+		return this;
+	};
+
+	prototype.geom = function (val) {
+		if (!arguments.length) return this.layer.geom;
+		this.layer.geom = val;
+		return this;
+	};
+
+	prototype.aesmappings = function (val) {
+		if (!arguments.length) return this.layer.aesmappings;
+		// ToDo: should val be obj or Axes (or either)?
+		this.layer.aesmappings = val;
+		return this;
+	};
+
+	return layer;
+})();
+
+ggd3.layer = function(s) {
+  return new ggd3.Layer(s);
+};
+
+ggd3.Layers = (function () {
+	var layers = function(spec) {
+		var i;
+		this.layers = [];
+		for (i = 0; i < spec.length; i++) {
+			this.layers.push(ggd3.layer(spec[i]));
+		}
+	};
+
+	var prototype = layers.prototype;
+
+	prototype.count = function () {
+		return this.layers.length;
+	};
+
+	prototype.asArray = function () {
+		return this.layers;
+	};
+
+	return layers;
+})();
+
+ggd3.layers = function(s) {
+  return new ggd3.Layers(s);
+};
 
 // ------------------
 // Plot
@@ -244,9 +405,8 @@ ggd3.Plot = (function () {
 			coord: spec.coord || "cartesian",
 			scales: ggd3.scales(spec.scales|| []),
 			axes: ggd3.axes(spec.axes || []),
-			// scales: spec.scales ? ggd3.scales(spec.scales) || [],
-			// axes: spec.axes ? ggd3.axes(spec.axes) : [],
-			facet: spec.facet || null
+			facet: spec.facet || null,
+			layers: ggd3.layers(spec.layers || [])
 		};
 		//if (spec) ggd3.extend(this.plot, spec);
 	};
@@ -294,6 +454,13 @@ ggd3.Plot = (function () {
 		if (!arguments.length) return this.plot.scales;
 		// ToDo: should val be obj or Scales (or either)?
 		this.plot.scales = val;
+		return this;
+	};
+
+	prototype.layers = function (val) {
+		if (!arguments.length) return this.plot.layers;
+		// ToDo: should val be obj or Layers (or either)?
+		this.plot.layers = val;
 		return this;
 	};
 
@@ -407,7 +574,7 @@ ggd3.Renderer = (function (d3) {
 
 		// Y scale range is always height of plot area
 		// ToDo: account for facets
-		scale.range([0, plotDef.plotAreaHeight()]);
+		scale.range([plotDef.plotAreaHeight(), 0]);
 		axis.scale(scale);
 
 		axis.ticks(5);
@@ -483,22 +650,7 @@ ggd3.ggd3 = (function () {
 		// Render chart
 		ggd3.renderer(plotDef).render();
 
-		// Layers are responsible for creating the objects that we perceive on the plot. 
-		// A layer is composed of:
-		//  - data and aesthetic mapping,
-		//  - a statistical transformation (stat),
-		//  - a geometric object (geom), and
-		//  - a position adjustment
-		// 
-		// GGPlot:
-		// 		layer(aes(x = x, y = y, color = z), geom="line",
-		// 		stat="smooth")
-		// [lg 3.1]
-
-		// Set axes for coordinate system
-		// switch (coord) {
-		// 	case "cartesian":
-		// }
+		
 
 	};
 

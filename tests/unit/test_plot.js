@@ -71,6 +71,18 @@ describe("Module: ggd3.Plot", function() {
 			expect(plot.scales().count()).toEqual(1);
 			expect(plot.scales().scale("myScale").type()).toEqual("pow");
 		});
+
+		it("should initialise the plot with a layer", function() {
+			var plot = ggd3.plot({
+				layers: [
+					{
+						geom: "text"
+					}
+				]
+			});
+			expect(plot.layers().count()).toEqual(1);
+			expect(plot.layers().asArray()[0].geom()).toEqual("text");
+		});
 	});
 
 	describe("plot area", function() {
