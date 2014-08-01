@@ -1,5 +1,8 @@
 describe("Module: ggd3.Plot", function() {
 	
+	// -----------------------
+	// Plot initialisations
+	// -----------------------
 	describe("plot initialisation", function() {
 		it("should initialise the plot width", function() {
 			var plot = ggd3.plot( {width: 200} );
@@ -97,6 +100,9 @@ describe("Module: ggd3.Plot", function() {
 		});
 	});
 
+	// -----------------------
+	// Plot area
+	// -----------------------
 	describe("plot area", function() {
 		it("should get the plot area width", function() {
 			var plot = ggd3.plot({
@@ -140,6 +146,18 @@ describe("Module: ggd3.Plot", function() {
 				}
 			});
 			expect(plot.plotAreaY()).toEqual(20);
+		});
+	});
+
+	// -----------------------
+	// Data
+	// -----------------------
+	describe("plot data", function() {
+		it("should get the name of default dataset", function() {
+			var plot = ggd3.plot({
+				data: [{name: "myData"}]
+			});
+			expect(plot.defaultDatasetName()).toEqual("myData");
 		});
 	});
 });

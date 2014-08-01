@@ -1,17 +1,20 @@
-describe("Module: ggd3.Data", function() {
+describe("Module: ggd3.Datasets", function() {
 	
-	describe("datasets initialisation", function() {
-		it("should initialise the datasets with one dataset", function() {
-			var datasets = ggd3.datasets( [{name: "myDataset"}] );
-			expect(datasets.count()).toEqual(1);
-			expect(datasets.dataset("myDataset").name()).toEqual("myDataset");
-		});
+	it("should initialise the datasets with one dataset", function() {
+		var datasets = ggd3.datasets( [{name: "myDataset"}] );
+		expect(datasets.count()).toEqual(1);
+		expect(datasets.dataset("myDataset").name()).toEqual("myDataset");
+	});
 
-		it("should initialise the datasets with two datasets", function() {
-			var datasets = ggd3.datasets( [{name: "dataset1"}, {name: "dataset2"}] );
-			expect(datasets.count()).toEqual(2);
-			expect(datasets.dataset("dataset1").name()).toEqual("dataset1");
-			expect(datasets.dataset("dataset2").name()).toEqual("dataset2");
-		});
+	it("should initialise the datasets with two datasets", function() {
+		var datasets = ggd3.datasets( [{name: "dataset1"}, {name: "dataset2"}] );
+		expect(datasets.count()).toEqual(2);
+		expect(datasets.dataset("dataset1").name()).toEqual("dataset1");
+		expect(datasets.dataset("dataset2").name()).toEqual("dataset2");
+	});
+
+	it("should find the names of datasets", function() {
+		var datasets = ggd3.datasets( [{name: "dataset1"}, {name: "dataset2"}] );
+		expect(datasets.names().sort()).toEqual(["dataset1", "dataset2"]);
 	});
 });

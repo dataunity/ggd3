@@ -28,6 +28,10 @@ describe("Module: ggd3.dataHelper", function() {
 			expect(dataHelper.datatableMin(datatable1, "x")).toBe(1);
 		});
 
+		it("should get datatable field min for x via stat", function() {
+			expect(dataHelper.datatableStat(datatable1, "x", "min")).toBe(1);
+		});
+
 		it("should get datatable field min for y", function() {
 			expect(dataHelper.datatableMin(datatable1, "y")).toBe(10);
 		});
@@ -36,8 +40,12 @@ describe("Module: ggd3.dataHelper", function() {
 			expect(dataHelper.datatableMax(datatable2, "x")).toBe(3.3);
 		});
 
-		it("should get datatable field min for y", function() {
+		it("should get datatable field max for y", function() {
 			expect(dataHelper.datatableMax(datatable2, "y")).toBe(12.2);
+		});
+
+		it("should get datatable field max for y via stat", function() {
+			expect(dataHelper.datatableStat(datatable2, "y", "max")).toBe(12.2);
 		});
 
 		it("should get datatables field min for x", function() {

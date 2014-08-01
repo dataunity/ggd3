@@ -11,4 +11,86 @@ describe("Module: ggd3.Scale", function() {
 			expect(scale.name()).toEqual("myScale");
 		});
 	});
+
+	describe("scale type", function() {
+		// Quantitative
+		it("should recognise linear scale as quantitative", function() {
+			var scale = ggd3.scale( {type: "linear"} );
+			expect(scale.isQuantitative()).toBe(true);
+			expect(scale.isOrdinal()).toBe(false);
+			expect(scale.isTime()).toBe(false);
+		});
+
+		it("should recognise sqrt scale as quantitative", function() {
+			var scale = ggd3.scale( {type: "sqrt"} );
+			expect(scale.isQuantitative()).toBe(true);
+			expect(scale.isOrdinal()).toBe(false);
+			expect(scale.isTime()).toBe(false);
+		});
+
+		it("should recognise power scale as quantitative", function() {
+			var scale = ggd3.scale( {type: "pow"} );
+			expect(scale.isQuantitative()).toBe(true);
+			expect(scale.isOrdinal()).toBe(false);
+			expect(scale.isTime()).toBe(false);
+		});
+
+		it("should recognise log scale as quantitative", function() {
+			var scale = ggd3.scale( {type: "log"} );
+			expect(scale.isQuantitative()).toBe(true);
+			expect(scale.isOrdinal()).toBe(false);
+			expect(scale.isTime()).toBe(false);
+		});
+
+		// Ordinal
+		it("should recognise ordinal scale as ordinal", function() {
+			var scale = ggd3.scale( {type: "ordinal"} );
+			expect(scale.isOrdinal()).toBe(true);
+			expect(scale.isQuantitative()).toBe(false);
+			expect(scale.isTime()).toBe(false);
+		});
+
+		it("should recognise category10 scale as ordinal", function() {
+			var scale = ggd3.scale( {type: "category10"} );
+			expect(scale.isOrdinal()).toBe(true);
+			expect(scale.isQuantitative()).toBe(false);
+			expect(scale.isTime()).toBe(false);
+		});
+
+		it("should recognise category20 scale as ordinal", function() {
+			var scale = ggd3.scale( {type: "category20"} );
+			expect(scale.isOrdinal()).toBe(true);
+			expect(scale.isQuantitative()).toBe(false);
+			expect(scale.isTime()).toBe(false);
+		});
+
+		it("should recognise category20b scale as ordinal", function() {
+			var scale = ggd3.scale( {type: "category20b"} );
+			expect(scale.isOrdinal()).toBe(true);
+			expect(scale.isQuantitative()).toBe(false);
+			expect(scale.isTime()).toBe(false);
+		});
+
+		it("should recognise category20c scale as ordinal", function() {
+			var scale = ggd3.scale( {type: "category20c"} );
+			expect(scale.isOrdinal()).toBe(true);
+			expect(scale.isQuantitative()).toBe(false);
+			expect(scale.isTime()).toBe(false);
+		});
+
+
+	});
+
+	describe("scale domain", function() {
+		it("should indentify whether a scale has a domain", function() {
+			var scale = ggd3.scale( {} );
+			expect(scale.hasDomain()).toBe(false);
+		});
+
+		it("should indentify that a scale has a domain", function() {
+			var scale = ggd3.scale( {domain: [2,3]} );
+			expect(scale.hasDomain()).toBe(true);
+		});
+
+	});
 });

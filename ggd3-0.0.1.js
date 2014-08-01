@@ -8,18 +8,50 @@ ggd3.util = (function () {
 	var isUndefined = function (val) {
 			return typeof val === 'undefined';
 		},
-		countObjKeys = function (obj) {
-			var size = 0, key;
+		objKeys = function (obj) {
+			var keys = [],
+				key;
 			for (key in obj) {
-				if (obj.hasOwnProperty(key)) size++;
+				if (obj.hasOwnProperty(key)) keys.push(key);
 			}
-			return size;
+			return keys;
+		},
+		countObjKeys = function (obj) {
+			return objKeys(obj).length;
+			// var size = 0, key;
+			// for (key in obj) {
+			// 	if (obj.hasOwnProperty(key)) size++;
+			// }
+			// return size;
 		};
 
 	return {
 		isUndefined: isUndefined,
+		objKeys: objKeys,
 		countObjKeys: countObjKeys
 	}
+})();
+
+ggd3.util.array = (function () {
+	var indexOf = function(arr, item) {
+			// Finds the index of item in array
+            var index = -1,
+            	i;
+            for(i = 0; i < arr.length; i++) {
+                if(arr[i] === item) {
+                    index = i;
+                    break;
+                }
+            }
+            return index;
+        },
+        contains = function (arr, item) {
+        	return indexOf(arr, item) !== -1;
+        };
+    return {
+    	indexOf: indexOf,
+    	contains: contains
+    }
 })();
 
 
@@ -56,12 +88,12 @@ ggd3.Dataset = (function() {
 	return dataset;
 })();
 
-ggd3.dataset = function(s) {
+ggd3.dataset = function (s) {
   return new ggd3.Dataset(s);
 };
 
-ggd3.Data = (function() {
-	var datasets = function(s) {
+ggd3.Data = (function () {
+	var datasets = function (s) {
 		var i, dataset;
 		this.datasets = {};
 		if (s) {
@@ -74,7 +106,7 @@ ggd3.Data = (function() {
 
 	var prototype = datasets.prototype;
 
-	prototype.dataset = function(datasetName, dataset) {
+	prototype.dataset = function (datasetName, dataset) {
 		// ToDo: Get or set dataset
 		if (arguments.length < 1) throw "dataset function needs datasetName argument.";
 		if (arguments.length == 1) return this.datasets[datasetName];
@@ -83,14 +115,18 @@ ggd3.Data = (function() {
 		return this;
 	};
 
-	prototype.count = function() {
+	prototype.count = function () {
 		return ggd3.util.countObjKeys(this.datasets);
+	};
+
+	prototype.names = function () {
+		return ggd3.util.objKeys(this.datasets);
 	};
 
 	return datasets;
 })();
 
-ggd3.datasets = function(s) {
+ggd3.datasets = function (s) {
   return new ggd3.Data(s);
 };
 
@@ -204,6 +240,27 @@ ggd3.Scale = (function () {
 		this.scale.domain = val;
 		return this;
 	};
+
+	prototype.hasDomain = function () {
+		// Whether a domain is specified for the scale
+		// Read only
+		return this.domain() != null;
+	}
+
+	prototype.isQuantitative = function () {
+		var quantScales = ["linear", "sqrt", "pow", "log"];
+		return ggd3.util.array.contains(quantScales, this.type());
+	}
+
+	prototype.isOrdinal = function () {
+		var ordinalScales = ["ordinal", "category10", "category20", "category20b", "category20c"];
+		return ggd3.util.array.contains(ordinalScales, this.type());
+	}
+
+	prototype.isTime = function () {
+		var timeScales = ["time"];
+		return ggd3.util.array.contains(timeScales, this.type());
+	}
 
 	return scale;
 })();
@@ -483,6 +540,7 @@ ggd3.Plot = (function () {
 			height: spec.height || 500,
 			padding: ggd3.padding(spec.padding || {}),
 			data: ggd3.datasets(spec.data || []),
+			defaultDatasetName: null,
 			// ToDo: automatically find co-ordinate system based on layers?
 			coord: spec.coord || "cartesian",
 			scales: ggd3.scales(spec.scales|| []),
@@ -577,6 +635,25 @@ ggd3.Plot = (function () {
 		return this.padding().top();
 	};
 
+	// ----------------------
+	// Data information
+	// ----------------------
+
+	prototype.defaultDatasetName = function (val) {
+		if (!arguments.length) {
+			if (this.plot.defaultDatasetName != null) {
+				return this.plot.defaultDatasetName;
+			} else if (this.plot.data.count() === 1) {
+				// Treat sole dataset as default data
+				return this.plot.data.names()[0];
+			} else {
+				return null;
+			}
+		}
+		this.plot.defaultDatasetName = val;
+		return this;
+	}
+
 	return plot;
 })();
 
@@ -585,9 +662,9 @@ ggd3.plot = function(p) {
 };
 
 ggd3.Renderer = (function (d3) {
-	var renderer = function(s) {
+	var renderer = function(plotDef) {
 		this.renderer = {
-			plotDef: s,
+			plotDef: plotDef,
 			xAxis: null,
 			yAxis: null
 		};
@@ -697,6 +774,52 @@ ggd3.Renderer = (function (d3) {
 		return this;
 	};
 
+	prototype.statAcrossLayers = function (aes, stat) {
+		// Looks at the data across all layers for an
+		// aesthetic and gets info about it (e.g. max or min)
+		var plotDef = this.plotDef(),
+			layers = plotDef.layers().asArray(),
+			statVal = null,
+			i, layer, aesmap, field, tmpStat,
+			datasetName, dataset;
+
+		for (i = 0; i < layers.length; i++) {
+			layer = layers[i];
+			aesmap = layer.aesmappings().findByAes(aes);
+			datasetName = layer.data();
+			if (!datasetName) {
+				datasetName = plotDef.defaultDatasetName();
+			}
+			dataset = plotDef.data().dataset(datasetName);
+			if (dataset == null) {
+				throw "Unable to find dataset with name " + datasetName;
+			}
+
+			if (aesmap) {
+				field = aesmap.field();
+				tmpStat = ggd3.dataHelper.datatableStat(dataset.values(), field, stat);
+				if (!isNaN(tmpStat)) {
+					if (statVal == null) statVal = tmpStat;
+					statVal = stat === "min" ? Math.min(statVal, tmpStat) : Math.max(statVal, tmpStat);
+				}
+			}
+		}
+
+		return statVal;
+	};
+
+	prototype.setupAxisScale = function (aes, scale, scaleDef) {
+		var min = 0,
+			max;
+		// If scale domain hasn't been set, use data to find domain
+		if (scaleDef.isQuantitative() && !scaleDef.hasDomain()) {
+			max = this.statAcrossLayers(aes, "max");
+			if (!isNaN(max)) {
+				scale.domain([0, max]).nice();
+			}
+		}
+	};
+
 	prototype.setupXAxis = function () {
 		// Produces D3 x axis
 		var plotDef = this.plotDef(),
@@ -714,6 +837,8 @@ ggd3.Renderer = (function (d3) {
 		// X scale range is always width of plot area
 		// ToDo: account for facets
 		scale.range([0, plotDef.plotAreaWidth()]);
+
+		this.setupAxisScale("x", scale, scaleDef);
 		axis.scale(scale);
 
 		axis.ticks(5);
@@ -738,6 +863,8 @@ ggd3.Renderer = (function (d3) {
 		// Y scale range is always height of plot area
 		// ToDo: account for facets
 		scale.range([plotDef.plotAreaHeight(), 0]);
+
+		this.setupAxisScale("y", scale, scaleDef);
 		axis.scale(scale);
 
 		axis.ticks(5);
@@ -778,10 +905,25 @@ ggd3.renderer = function(s) {
 
 ggd3.dataHelper = (function (d3) {
 	var datatableMin = function (datatable, field) {
+			// Finds the min value of the field in the datatable
 			return d3.min(datatable, function (d) { return d[field]; });
 		},
 		datatableMax = function (datatable, field) {
+			// Finds the max value of the field in the datatable
 			return d3.max(datatable, function (d) { return d[field]; });
+		},
+		datatableStat = function (datatable, field, stat) {
+			// Finds the value of the stat (e.g. max) for the field in the datatable
+			var statVal = null;
+			switch (stat) {
+				case "min":
+				case "max":
+					statVal = stat === "min" ? datatableMin(datatable, field) : datatableMax(datatable, field);
+					break;
+				default:
+					throw "Can't get datatables stat, unknown stat " + stat;
+			}
+			return statVal;
 		},
 		datatablesStat = function (datatables, field, stat) {
 			var statVal = null,
@@ -808,53 +950,19 @@ ggd3.dataHelper = (function (d3) {
 	return {
 		datatableMin: datatableMin,
 		datatableMax: datatableMax,
+		datatableStat: datatableStat,
 		datatablesStat: datatablesStat
 	}
 })(d3);
 
-// ggd3.renderer = (function (d3) {
-// 	//
-// 	var render = function (plotDef) {
-// 			var plot = d3.select(plotDef.selector())
-// 					.append("svg")
-// 						.attr("width", plotDef.width())
-// 						.attr("height", plotDef.height());
-
-// 			// Axes
-// 			switch (plot.coord()) {
-// 				case "cartesian":
-// 					// Need an x and y axis
-// 					// ToDo: support x2 and y2 axes
-// 					var axis = d3.svg.axis() // <-D
-// 						.scale(scale) // <-E
-// 						.orient(orient) // <-F
-// 						.ticks(5);
-
-// 					break;
-// 				default:
-// 					throw "Unrecognised coordinate system used."
-// 			}
-// 		};
-
-// 	return {
-// 		render: render
-// 	};
-// })(d3);
-
-
 ggd3.ggd3 = (function () {
 	// Init
 	var render = function (spec) {
-		// ToDo: set spec defaults
-
 		// Load spec
 		var plotDef = ggd3.plot(spec);
 
 		// Render chart
 		ggd3.renderer(plotDef).render();
-
-		
-
 	};
 
 	return {
