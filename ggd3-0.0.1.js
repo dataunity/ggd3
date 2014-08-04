@@ -65,7 +65,9 @@ ggd3.Dataset = (function() {
 		if (ggd3.util.isUndefined(spec.name)) throw "The dataset name must be defined";
 		this.dataset = {
 			name: spec.name,
-			values: spec.values || null
+			values: spec.values || null,
+			url: spec.url || null,
+			contentType: spec.contentType || null
 		};
 		//if (s) ggd3.extend(this.dataset, s);
 	};
@@ -79,9 +81,22 @@ ggd3.Dataset = (function() {
 	};
 
 	prototype.values = function(val) {
+		// Note: values should be JSON style data, e.g:
+		// [{"a": 1, "b": 1}, {"a": 2, "b": 2}]
 		if (!arguments.length) return this.dataset.values;
-		// ToDo: set as object, ggd3 values (or either)?
 		this.dataset.values = val;
+		return this;
+	};
+
+	prototype.url = function (val) {
+		if (!arguments.length) return this.dataset.url;
+		this.dataset.url = val;
+		return this;
+	};
+
+	prototype.contentType = function (val) {
+		if (!arguments.length) return this.dataset.contentType;
+		this.dataset.contentType = val;
 		return this;
 	};
 
@@ -666,7 +681,8 @@ ggd3.Renderer = (function (d3) {
 		this.renderer = {
 			plotDef: plotDef,
 			xAxis: null,
-			yAxis: null
+			yAxis: null,
+			datasetsRetrieved: {}
 		};
 	};
 
@@ -678,7 +694,96 @@ ggd3.Renderer = (function (d3) {
 		return this;
 	};
 
+
 	prototype.render = function () {
+		var this_ = this,
+			plotDef = this.plotDef(),
+			datasetNames = plotDef.data().names(),
+			loadData = function (url, datasetName, contentType, callback) {
+				var contentTypeLC = contentType ? contentType.toLowerCase() : contentType;
+				switch (contentTypeLC) {
+					case "text/csv":
+						d3.csv(url, function(err, res) {
+							if (err) throw "Error fetching CSV results: " + err.statusText;
+							// Save results and notify queue
+							plotDef.data().dataset(datasetName).values(res);
+							callback(null, res);
+						});
+						break;
+					case "text/tsv":
+					case "text/tab-separated-values":
+						d3.tsv(url, function(err, res) {
+							if (err) throw "Error fetching TSV results: " + err.statusText;
+							// Save results and notify queue
+							plotDef.data().dataset(datasetName).values(res);
+							callback(null, res);
+						});
+						break;
+					case "application/json":
+						d3.json(url, function(err, res) {
+							if (err) throw "Error fetching JSON results: " + err.statusText;
+							// Save results and notify queue
+							plotDef.data().dataset(datasetName).values(res);
+							callback(null, res);
+						});
+						break;
+					default:
+						throw "Don't know you to load data of type " + contentType;
+				}
+			},
+			q = queue(3),
+			i, datasetName, dataset;
+
+		// Fetch data
+		// q.defer(loadData, "data/iris-flowers.tsv", "data")
+		// 	//.defer(loadData, "data/iris-flowers.tsv1", "data")
+		// 	.awaitAll(function(error, results) {
+		// 		if (error) {
+		// 			// ToDo: write error in place of chart?
+		// 			throw "Error fetching data results: " + error.statusText;
+		// 		}
+		// 		console.log("Done loading all datasets.");
+		// 		this_.renderPlot();
+		// 	});
+
+		// Queue all data held at url
+		for (i = 0; i < datasetNames.length; i++) {
+			datasetName = datasetNames[i];
+			dataset = plotDef.data().dataset(datasetName);
+			//console.log(datasetName);
+
+			if (dataset && dataset.url()) {
+				console.log("Loading dataset " + datasetName);
+				q.defer(loadData, dataset.url(), datasetName, dataset.contentType());
+			}
+		}
+
+		q.awaitAll(function(error, results) {
+				if (error) {
+					// ToDo: write error in place of chart?
+					throw "Error fetching data results: " + error.statusText;
+				}
+				console.log("Done loading all datasets.");
+				this_.renderPlot();
+			});
+
+		/*
+var q = queue();
+  filenames.forEach(function(d) {
+    //add your csv call to the queue
+    q.defer(function(callback) {
+      d3.csv(d.filename,function(res) { callback(null, res) });
+    });
+  });
+
+  q.await(restOfCode)
+		*/
+
+
+		
+	};
+
+	prototype.renderPlot = function () {
 		var plotDef = this.plotDef(),
 			plot = d3.select(plotDef.selector())
 				.append("svg")

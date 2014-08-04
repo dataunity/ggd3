@@ -3,6 +3,10 @@
     <head>
         <title>GGD3</title>
         <link href="../css/theme/default/ggd3-0.0.1.css" rel="stylesheet" />
+
+        <!-- ToDo: remove this dependency or package into ggd3 (see ggd3.renderer.render() method) -->
+        <script src="http://d3js.org/queue.v1.min.js"></script>
+
         <script src="../lib/d3.js" charset="utf-8"></script>
         <script src="../ggd3-0.0.1.js" charset="utf-8"></script>
     </head>
@@ -18,12 +22,8 @@
                 "data": [
                     {
                         "name": "data",
-                        "values": [
-                            {"x": 0.0, "y": 0.0, "img":"data/ffox.png", "type": "a"},
-                            {"x": 0.5, "y": 0.5, "img":"data/ffox.png", "type": "a"},
-                            {"x": 1.5, "y": 1.5, "img":"data/gimp.png", "type": "a"},
-                            {"x": 2.5, "y": 2.5, "img":"data/7zip.png", "type": "b"}
-                        ]
+                        "url": "data/iris-flowers.tsv",
+                        "contentType": "text/tab-separated-values"
                     }
                 ],
                 "scales": [
@@ -37,8 +37,8 @@
                 "layers": [
                     {
                         "aesmappings": [
-                            {aes: "x", field: "x"},
-                            {aes: "y", field: "y"}
+                            {aes: "x", field: "sepalWidth"},
+                            {aes: "y", field: "sepalLength"}
                         ],
                         "data": "data",
                         "geom": "point",
