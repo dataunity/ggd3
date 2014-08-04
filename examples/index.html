@@ -28,7 +28,8 @@
                 ],
                 "scales": [
                     {"name": "x", "type": "linear"},
-                    {"name": "y", "type": "linear"}
+                    {"name": "y", "type": "linear"},
+                    {"name": "color", "type": "category10"},
                 ],
                 "axes": [
                     {"type": "x", "scale": "x"},
@@ -38,7 +39,8 @@
                     {
                         "aesmappings": [
                             {aes: "x", field: "sepalWidth"},
-                            {aes: "y", field: "sepalLength"}
+                            {aes: "y", field: "sepalLength"},
+                            {aes: "color", field: "species", scale: "color"}
                         ],
                         "data": "data",
                         "geom": "point",

@@ -387,7 +387,8 @@ ggd3.AesMapping = (function () {
 	var aesmap = function(s) {
 		this.aesmap = {
 			aes: s.aes || null,
-			field: s.field || null
+			field: s.field || null,
+			scale: s.scale || null
 		};
 		//if (s) ggd3.extend(this.aesmap, s);
 	};
@@ -403,6 +404,12 @@ ggd3.AesMapping = (function () {
 	prototype.field = function (val) {
 		if (!arguments.length) return this.aesmap.field;
 		this.aesmap.field = val;
+		return this;
+	};
+
+	prototype.scale = function (val) {
+		if (!arguments.length) return this.aesmap.scale;
+		this.aesmap.scale = val;
 		return this;
 	};
 
@@ -682,7 +689,8 @@ ggd3.Renderer = (function (d3) {
 			plotDef: plotDef,
 			xAxis: null,
 			yAxis: null,
-			datasetsRetrieved: {}
+			datasetsRetrieved: {},
+			warnings: []
 		};
 	};
 
@@ -694,6 +702,10 @@ ggd3.Renderer = (function (d3) {
 		return this;
 	};
 
+	prototype.warning = function (warning) {
+		// Adds a warning to the log
+		this.renderer.warnings.push(warning);
+	}
 
 	prototype.render = function () {
 		var this_ = this,
@@ -794,13 +806,15 @@ ggd3.Renderer = (function (d3) {
 	prototype.drawPointLayer = function (plotArea, layerDef) {
 		// Draws points (e.g. circles) onto the plot area
 		var plotDef = this.plotDef(),
-			xField = layerDef.aesmappings().findByAes("x").field(),
-			yField = layerDef.aesmappings().findByAes("y").field(),
+			aesmappings = layerDef.aesmappings(),
+			xField = aesmappings.findByAes("x").field(),
+			yField = aesmappings.findByAes("y").field(),
 			xScale = this.xAxis().scale(),
 			yScale = this.yAxis().scale(),
 			datasetName = layerDef.data(),
 			dataset = plotDef.data().dataset(datasetName),
-			values = dataset.values();
+			values = dataset.values(),
+			points, colorAesMap;
 
 		// ToDo: check aes mappings to see if axis x2 or y2 used instead
 		// plotArea.selectAll(".dot")
@@ -811,15 +825,32 @@ ggd3.Renderer = (function (d3) {
 		// 		.attr("cx", function(d) { return xScale(d[xField]); })
 		// 		.attr("cy", function(d) { return yScale(d[yField]); });
 
-		plotArea.selectAll(".ggd3-point")
+		points = plotArea.selectAll(".ggd3-point")
 				.data(values)
 			.enter().append("circle")
 				.attr("class", "ggd3-point")
 				.attr("r", 3.5)
 				.attr("cx", function(d) { return xScale(d[xField]); })
 				.attr("cy", function(d) { return yScale(d[yField]); });
-		
-		//.style("fill", function(d) { return color(d.species); });
+
+		// Fill colour
+		// ToDo: setup colour scale across all layers, so colours
+		// are matched across layers
+		console.log("Warning: move colour mapping to all levels.");
+		colorAesMap = aesmappings.findByAes("color");
+		if (colorAesMap) {
+			var colorField = colorAesMap.field(),
+				colorScaleRef = colorAesMap.scale(),
+				colorScaleDef = plotDef.scales().scale(colorScaleRef),
+				colorScale;
+			if (colorScaleRef == null) {
+				this.warning("Couldn't set colour on point layer - no valid colour scale.")
+			} else {
+				colorScale = this.scale(colorScaleDef);
+				points.style("fill", function(d) { return colorScale(d[colorField]); });
+			}
+			
+		}
 	};
 
 	prototype.drawAxes = function (plot) {
@@ -971,6 +1002,11 @@ ggd3.Renderer = (function (d3) {
 			case "pow":
 				scale = d3.scale.pow();
 				break;
+			case "category10":
+				scale = d3.scale.category10();
+				break;
+			default:
+				throw "Unknow D3 scale type " + scaleDef.type();
 		}
 
 		if (scale == null) {

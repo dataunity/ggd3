@@ -5,6 +5,10 @@
 	shape-rendering: crispEdges;
 }
 
+.ggd3-axis g.tick text {
+	font: 12px sans-serif;
+}
+
 .ggd3-point {
 	stroke: #000;
 }
