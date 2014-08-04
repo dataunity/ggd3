@@ -705,7 +705,6 @@ ggd3.Renderer = (function (d3) {
 					case "text/csv":
 						d3.csv(url, function(err, res) {
 							if (err) throw "Error fetching CSV results: " + err.statusText;
-							// Save results and notify queue
 							plotDef.data().dataset(datasetName).values(res);
 							callback(null, res);
 						});
@@ -714,7 +713,6 @@ ggd3.Renderer = (function (d3) {
 					case "text/tab-separated-values":
 						d3.tsv(url, function(err, res) {
 							if (err) throw "Error fetching TSV results: " + err.statusText;
-							// Save results and notify queue
 							plotDef.data().dataset(datasetName).values(res);
 							callback(null, res);
 						});
@@ -722,7 +720,6 @@ ggd3.Renderer = (function (d3) {
 					case "application/json":
 						d3.json(url, function(err, res) {
 							if (err) throw "Error fetching JSON results: " + err.statusText;
-							// Save results and notify queue
 							plotDef.data().dataset(datasetName).values(res);
 							callback(null, res);
 						});
@@ -734,53 +731,22 @@ ggd3.Renderer = (function (d3) {
 			q = queue(3),
 			i, datasetName, dataset;
 
-		// Fetch data
-		// q.defer(loadData, "data/iris-flowers.tsv", "data")
-		// 	//.defer(loadData, "data/iris-flowers.tsv1", "data")
-		// 	.awaitAll(function(error, results) {
-		// 		if (error) {
-		// 			// ToDo: write error in place of chart?
-		// 			throw "Error fetching data results: " + error.statusText;
-		// 		}
-		// 		console.log("Done loading all datasets.");
-		// 		this_.renderPlot();
-		// 	});
-
 		// Queue all data held at url
 		for (i = 0; i < datasetNames.length; i++) {
 			datasetName = datasetNames[i];
 			dataset = plotDef.data().dataset(datasetName);
-			//console.log(datasetName);
-
 			if (dataset && dataset.url()) {
-				console.log("Loading dataset " + datasetName);
 				q.defer(loadData, dataset.url(), datasetName, dataset.contentType());
 			}
 		}
-
 		q.awaitAll(function(error, results) {
 				if (error) {
 					// ToDo: write error in place of chart?
 					throw "Error fetching data results: " + error.statusText;
 				}
-				console.log("Done loading all datasets.");
+				// Data loaded - continue rendering
 				this_.renderPlot();
 			});
-
-		/*
-var q = queue();
-  filenames.forEach(function(d) {
-    //add your csv call to the queue
-    q.defer(function(callback) {
-      d3.csv(d.filename,function(res) { callback(null, res) });
-    });
-  });
-
-  q.await(restOfCode)
-		*/
-
-
-		
 	};
 
 	prototype.renderPlot = function () {
