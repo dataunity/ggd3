@@ -1,0 +1,10 @@
+.ggd3-axis path,
+.ggd3-axis line {
+	fill: none;
+	stroke: #000;
+	shape-rendering: crispEdges;
+}
+
+.ggd3-point {
+	stroke: #000;
+}

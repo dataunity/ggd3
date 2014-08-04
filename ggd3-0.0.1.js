@@ -685,6 +685,11 @@ ggd3.Renderer = (function (d3) {
 					.attr("width", plotDef.width())
 					.attr("height", plotDef.height());
 
+		console.log(plotDef.plotAreaX());
+		console.log(plotDef.plotAreaY());
+		console.log(plotDef.plotAreaHeight());
+		console.log(plotDef.plotAreaWidth());
+
 		// ToDo: if no domain set on axes, default to extent
 		// of data for appropriate aes across layers
 		this.setupXAxis();
@@ -695,10 +700,13 @@ ggd3.Renderer = (function (d3) {
 		
 	};
 
-	prototype.drawLayers = function (plotArea) {
+	prototype.drawLayers = function (plot) {
 		var plotDef = this.plotDef(),
 			layerDefs = plotDef.layers().asArray(),
-			i, layerDef;
+			i, layerDef, plotArea;
+
+		plotArea = plot.append("g")
+			.attr("transform", "translate(" + plotDef.plotAreaX() + "," + plotDef.plotAreaY() + ")");
 
 		for (i = 0; i < layerDefs.length; i++) {
 			layerDef = layerDefs[i];
@@ -724,10 +732,18 @@ ggd3.Renderer = (function (d3) {
 			values = dataset.values();
 
 		// ToDo: check aes mappings to see if axis x2 or y2 used instead
-		plotArea.selectAll(".dot")
+		// plotArea.selectAll(".dot")
+		// 		.data(values)
+		// 	.enter().append("circle")
+		// 		.attr("class", "dot")
+		// 		.attr("r", 3.5)
+		// 		.attr("cx", function(d) { return xScale(d[xField]); })
+		// 		.attr("cy", function(d) { return yScale(d[yField]); });
+
+		plotArea.selectAll(".ggd3-point")
 				.data(values)
 			.enter().append("circle")
-				.attr("class", "dot")
+				.attr("class", "ggd3-point")
 				.attr("r", 3.5)
 				.attr("cx", function(d) { return xScale(d[xField]); })
 				.attr("cy", function(d) { return yScale(d[yField]); });
@@ -744,14 +760,15 @@ ggd3.Renderer = (function (d3) {
 				// ToDo: support x2 and y2 axes
 				//var xAxisDef = plotDef.axes().axis("x");
 				var xAxis = this.xAxis(),
-					yAxis = this.yAxis();
+					yAxis = this.yAxis(),
+					xAxisY = plotDef.plotAreaY() + plotDef.plotAreaHeight();
 				plot.append("g")
-					.attr("class", "x axis")
-					.attr("transform", "translate(" + plotDef.plotAreaX() + "," + plotDef.plotAreaHeight() + ")")
+					.attr("class", "ggd3-x ggd3-axis")
+					.attr("transform", "translate(" + plotDef.plotAreaX() + "," + xAxisY + ")")
 					.call(xAxis);
 				// ToDo: append x axis title
 				plot.append("g")
-					.attr("class", "y axis")
+					.attr("class", "ggd3-y ggd3-axis")
 					.attr("transform", "translate(" + plotDef.plotAreaX() + "," + plotDef.plotAreaY() + ")")
 					.call(yAxis);
 				// ToDo: append x axis title
