@@ -229,9 +229,10 @@ ggd3.axes = function(s) {
 ggd3.Scale = (function () {
 	var scale = function(spec) {
 		this.scale = {
-			domain: spec.domain || null,
 			type: spec.type || null,
-			name: spec.name || null
+			name: spec.name || null,
+			domain: spec.domain || null,
+			range: spec.range || null
 		};
 		//if (spec) ggd3.extend(this.scale, spec);
 	};
@@ -256,10 +257,22 @@ ggd3.Scale = (function () {
 		return this;
 	};
 
+	prototype.range = function(val) {
+		if (!arguments.length) return this.scale.range;
+		this.scale.range = val;
+		return this;
+	};
+
 	prototype.hasDomain = function () {
 		// Whether a domain is specified for the scale
 		// Read only
 		return this.domain() != null;
+	}
+
+	prototype.hasRange = function () {
+		// Whether a range is specified for the scale
+		// Read only
+		return this.range() != null;
 	}
 
 	prototype.isQuantitative = function () {
@@ -708,8 +721,14 @@ ggd3.Renderer = (function (d3) {
 	}
 
 	prototype.render = function () {
-		var this_ = this,
-			plotDef = this.plotDef(),
+		var this_ = this;
+		d3.select(this.plotDef().selector()).select("svg").remove();
+		// Fetch data then render plot
+		this.fetchData(function () { this_.renderPlot(); })
+	};
+
+	prototype.fetchData = function (finishedCallback) {
+		var plotDef = this.plotDef(),
 			datasetNames = plotDef.data().names(),
 			loadData = function (url, datasetName, contentType, callback) {
 				var contentTypeLC = contentType ? contentType.toLowerCase() : contentType;
@@ -757,9 +776,9 @@ ggd3.Renderer = (function (d3) {
 					throw "Error fetching data results: " + error.statusText;
 				}
 				// Data loaded - continue rendering
-				this_.renderPlot();
+				finishedCallback();
 			});
-	};
+	}
 
 	prototype.renderPlot = function () {
 		var plotDef = this.plotDef(),
@@ -796,10 +815,12 @@ ggd3.Renderer = (function (d3) {
 
 			switch (layerDef.geom()) {
 				case "point":
+					this.drawPointLayer(plotArea, layerDef);
+					break;
+				case "bar":
+					this.drawBarLayer(plotArea, layerDef);
 					break;
 			}
-  			this.drawPointLayer(plotArea, layerDef);
-			
 		}
 	};
 
@@ -814,16 +835,7 @@ ggd3.Renderer = (function (d3) {
 			datasetName = layerDef.data(),
 			dataset = plotDef.data().dataset(datasetName),
 			values = dataset.values(),
-			points, colorAesMap;
-
-		// ToDo: check aes mappings to see if axis x2 or y2 used instead
-		// plotArea.selectAll(".dot")
-		// 		.data(values)
-		// 	.enter().append("circle")
-		// 		.attr("class", "dot")
-		// 		.attr("r", 3.5)
-		// 		.attr("cx", function(d) { return xScale(d[xField]); })
-		// 		.attr("cy", function(d) { return yScale(d[yField]); });
+			points;
 
 		points = plotArea.selectAll(".ggd3-point")
 				.data(values)
@@ -833,11 +845,49 @@ ggd3.Renderer = (function (d3) {
 				.attr("cx", function(d) { return xScale(d[xField]); })
 				.attr("cy", function(d) { return yScale(d[yField]); });
 
+		this.applyFillColour(points, aesmappings);
+		
+	};
+
+	prototype.drawBarLayer = function (plotArea, layerDef) {
+		// Draws bars onto the plot area
+		var plotDef = this.plotDef(),
+			plotHeight = plotDef.plotAreaHeight(),
+			aesmappings = layerDef.aesmappings(),
+			xField = aesmappings.findByAes("x").field(),
+			yField = aesmappings.findByAes("y").field(),
+			xScale = this.xAxis().scale(),
+			yScale = this.yAxis().scale(),
+			datasetName = layerDef.data(),
+			dataset = plotDef.data().dataset(datasetName),
+			values = dataset.values(),
+			bars;
+
+		bars = plotArea.selectAll("rect.ggd3-bar")
+				.data(values)
+			.enter().append("rect")
+				.attr("class", "ggd3-bar")
+				.attr("x", function(d) { return xScale(d[xField]); })
+				.attr("y", function(d) { return yScale(d[yField]); })
+				.attr("height", function(d) { return plotHeight - yScale(d[yField]); })
+				.attr("width", xScale.rangeBand());
+
+		this.applyFillColour(bars, aesmappings);
+		
+	};
+
+	prototype.applyFillColour = function (svgItems, aesmappings) {
+		// Applies fill colour to svg elements
+		// Params:
+		//	svgItems: the svg elements as D3 select list
+		//	aesmappings: the layer's aesmappings
+
 		// Fill colour
 		// ToDo: setup colour scale across all layers, so colours
 		// are matched across layers
 		console.log("Warning: move colour mapping to all levels.");
-		colorAesMap = aesmappings.findByAes("color");
+		var plotDef = this.plotDef(),
+			colorAesMap = aesmappings.findByAes("color");
 		if (colorAesMap) {
 			var colorField = colorAesMap.field(),
 				colorScaleRef = colorAesMap.scale(),
@@ -847,7 +897,7 @@ ggd3.Renderer = (function (d3) {
 				this.warning("Couldn't set colour on point layer - no valid colour scale.")
 			} else {
 				colorScale = this.scale(colorScaleDef);
-				points.style("fill", function(d) { return colorScale(d[colorField]); });
+				svgItems.style("fill", function(d) { return colorScale(d[colorField]); });
 			}
 			
 		}
@@ -927,16 +977,69 @@ ggd3.Renderer = (function (d3) {
 		return statVal;
 	};
 
-	prototype.setupAxisScale = function (aes, scale, scaleDef) {
-		var min = 0,
-			max;
-		// If scale domain hasn't been set, use data to find domain
-		if (scaleDef.isQuantitative() && !scaleDef.hasDomain()) {
-			max = this.statAcrossLayers(aes, "max");
-			if (!isNaN(max)) {
-				scale.domain([0, max]).nice();
+	prototype.allValuesAcrossLayers = function (aes) {
+		// Looks at the data across all layers for an
+		// aesthetic and gets all it's values
+		var plotDef = this.plotDef(),
+			layers = plotDef.layers().asArray(),
+			values = [],
+			tmpVals, i, layer, aesmap, field,
+			datasetName, dataset;
+
+		for (i = 0; i < layers.length; i++) {
+			layer = layers[i];
+			aesmap = layer.aesmappings().findByAes(aes);
+			datasetName = layer.data();
+			if (!datasetName) {
+				datasetName = plotDef.defaultDatasetName();
+			}
+			dataset = plotDef.data().dataset(datasetName);
+			if (dataset == null) {
+				throw "Unable to find dataset with name " + datasetName;
+			}
+
+			if (aesmap) {
+				field = aesmap.field();
+				
+				if (dataset.values().map) {
+					tmpVals = dataset.values().map(function (d) { return d[field]; });
+				} else {
+					// backup way to get values from data
+					// ToDo: use array.map polyfill so this can be removed?
+					var tmpVals = [],
+						dsVals = dataset.values(),
+						j;
+					this.warning("Old browser - doesn't support array.map");
+					for (j = 0; j < dsVals.length; j++) {
+						tmpVals.push(dsVals[j][field]);
+					}
+				}
+				values = d3.merge([ values, tmpVals ]);
 			}
 		}
+
+		return values;
+	};
+
+	prototype.setupAxisScale = function (aes, scale, scaleDef) {
+		var min = 0,
+			max,
+			allValues = [];
+
+		// If scale domain hasn't been set, use data to find it
+		if (!scaleDef.hasDomain()) {
+			if (scaleDef.isQuantitative()) {
+				max = this.statAcrossLayers(aes, "max");
+				if (!isNaN(max)) {
+					scale.domain([0, max]).nice();
+				}
+			} else if (scaleDef.isOrdinal()) {
+				allValues = this.allValuesAcrossLayers(aes);
+				scale.domain(allValues);
+				//scale.domain(data.map(function(d) { return d.letter; }));
+			}
+		}
+		
 	};
 
 	prototype.setupXAxis = function () {
@@ -956,6 +1059,9 @@ ggd3.Renderer = (function (d3) {
 		// X scale range is always width of plot area
 		// ToDo: account for facets
 		scale.range([0, plotDef.plotAreaWidth()]);
+		if (scaleDef.isOrdinal()) {
+			scale.rangeRoundBands([0, plotDef.plotAreaWidth()], .1);
+		}
 
 		this.setupAxisScale("x", scale, scaleDef);
 		axis.scale(scale);
@@ -998,6 +1104,9 @@ ggd3.Renderer = (function (d3) {
 		switch (scaleDef.type()) {
 			case "linear":
 				scale = d3.scale.linear();
+				break;
+			case "ordinal":
+				scale = d3.scale.ordinal();
 				break;
 			case "pow":
 				scale = d3.scale.pow();

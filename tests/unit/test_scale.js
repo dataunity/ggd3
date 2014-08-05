@@ -10,6 +10,16 @@ describe("Module: ggd3.Scale", function() {
 			var scale = ggd3.scale( {name: "myScale"} );
 			expect(scale.name()).toEqual("myScale");
 		});
+
+		it("should initialise the scale with a domain", function() {
+			var scale = ggd3.scale( {domain: [10,20]} );
+			expect(scale.domain()).toEqual([10,20]);
+		});
+
+		it("should initialise the scale with a range", function() {
+			var scale = ggd3.scale( {range: [30,40]} );
+			expect(scale.range()).toEqual([30,40]);
+		});
 	});
 
 	describe("scale type", function() {
@@ -90,6 +100,19 @@ describe("Module: ggd3.Scale", function() {
 		it("should indentify that a scale has a domain", function() {
 			var scale = ggd3.scale( {domain: [2,3]} );
 			expect(scale.hasDomain()).toBe(true);
+		});
+
+	});
+
+	describe("scale range", function() {
+		it("should indentify whether a scale has a range", function() {
+			var scale = ggd3.scale( {} );
+			expect(scale.hasRange()).toBe(false);
+		});
+
+		it("should indentify that a scale has a range", function() {
+			var scale = ggd3.scale( {range: [2,3]} );
+			expect(scale.hasRange()).toBe(true);
 		});
 
 	});

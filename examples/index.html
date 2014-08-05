@@ -9,48 +9,121 @@
 
         <script src="../lib/d3.js" charset="utf-8"></script>
         <script src="../ggd3-0.0.1.js" charset="utf-8"></script>
+
+        <!-- JQuery: only used to help with this page, not needed for ggd3 -->
+        <script src="lib/jquery-1.11.1.js" charset="utf-8"></script>
     </head>
     <body>
+        <div>Please select a chart type.</div>
+        <div id="feedback"></div>
+        <div>
+            <select id="chartType">
+                <option value="">-- Please choose: --</option>
+                <option value="scatterplot">Scatterplot</option>
+                <option value="bar">Bar</option>
+            </select>
+        </div>
         <div id="chart"></div>
         <script>
-            var spec = {
-                "selector": "#chart",
-                "coord": "cartesian",
-                "width": 500,
-                "height": 400,
-                "padding": {"left":30, "top":10, "bottom":30, "right":10},
-                "data": [
-                    {
-                        "name": "data",
-                        "url": "data/iris-flowers.tsv",
-                        "contentType": "text/tab-separated-values"
-                    }
-                ],
-                "scales": [
-                    {"name": "x", "type": "linear"},
-                    {"name": "y", "type": "linear"},
-                    {"name": "color", "type": "category10"},
-                ],
-                "axes": [
-                    {"type": "x", "scale": "x"},
-                    {"type": "y", "scale": "y"}
-                ],
-                "layers": [
-                    {
-                        "aesmappings": [
-                            {aes: "x", field: "sepalWidth"},
-                            {aes: "y", field: "sepalLength"},
-                            {aes: "color", field: "species", scale: "color"}
-                        ],
-                        "data": "data",
-                        "geom": "point",
-                        "stat": null,
-                        "posadj": null
-                    }
-                ]
-            };
+            function chartSpec (chartType) {
+                switch (chartType) {
+                    case "scatterplot":
+                        return spec = {
+                            "selector": "#chart",
+                            "coord": "cartesian",
+                            "width": 500,
+                            "height": 400,
+                            "padding": {"left":30, "top":10, "bottom":30, "right":10},
+                            "data": [
+                                {
+                                    "name": "data",
+                                    "url": "data/iris-flowers.tsv",
+                                    "contentType": "text/tab-separated-values"
+                                }
+                            ],
+                            "scales": [
+                                {"name": "x", "type": "linear"},
+                                {"name": "y", "type": "linear"},
+                                {"name": "color", "type": "category10"},
+                            ],
+                            "axes": [
+                                {"type": "x", "scale": "x"},
+                                {"type": "y", "scale": "y"}
+                            ],
+                            "layers": [
+                                {
+                                    "aesmappings": [
+                                        {aes: "x", field: "sepalWidth"},
+                                        {aes: "y", field: "sepalLength"},
+                                        {aes: "color", field: "species", scale: "color"}
+                                    ],
+                                    "data": "data",
+                                    "geom": "point",
+                                    "stat": null,
+                                    "posadj": null
+                                }
+                            ]
+                        };
+                        break;
+                    case "bar":
+                        return spec = {
+                            "selector": "#chart",
+                            "coord": "cartesian",
+                            "width": 500,
+                            "height": 400,
+                            "padding": {"left":30, "top":10, "bottom":30, "right":10},
+                            "data": [
+                                {
+                                    "name": "data",
+                                    "url": "data/product_stock.csv",
+                                    "contentType": "text/csv"
+                                }
+                            ],
+                            "scales": [
+                                {"name": "x", "type": "ordinal"},
+                                {"name": "y", "type": "linear"},
+                                {"name": "color", "type": "category10"},
+                            ],
+                            "axes": [
+                                {"type": "x", "scale": "x"},
+                                {"type": "y", "scale": "y"}
+                            ],
+                            "layers": [
+                                {
+                                    "aesmappings": [
+                                        {aes: "x", field: "Product"},
+                                        {aes: "y", field: "Stock"},
+                                        {aes: "color", field: "Product", scale: "color"}
+                                    ],
+                                    "data": "data",
+                                    "geom": "bar"
+                                }
+                            ]
+                        };
+                        break;
+                    default:
+                        return null;
+                }
+            }
 
-            ggd3.ggd3.render(spec);
+            function drawChart (chartType) {
+                var spec = chartSpec(chartType);
+                if (spec == null) {
+                    $("#feedback").text("No spec for the requested chart type.");
+                } else {
+                    $("#feedback").text("");
+                }
+                ggd3.ggd3.render(spec);
+            }
+
+            $(document).ready(function () {
+                $("#chartType").on("change", function () {
+                    var chartType = $("#chartType").val();
+                    drawChart(chartType);
+                });
+            });
+
+            ggd3.ggd3.render(chartSpec("bar"));
 
         </script>
     </body>
