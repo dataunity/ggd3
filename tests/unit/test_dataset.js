@@ -34,6 +34,12 @@ describe("Module: ggd3.Dataset", function() {
 			var dataset = ggd3.dataset( {name: "x1", contentType: "text/tab-separated-values"} );
 			expect(dataset.contentType()).toEqual("text/tab-separated-values");
 		});
+
+		it("should initialise the dataset with column data types", function() {
+			var dataset = ggd3.dataset( {name: "x1", dataTypes: {"columnA": "number", "columnB": "boolean"}} );
+			expect(dataset.dataTypes()["columnA"]).toEqual("number");
+			expect(dataset.dataTypes()["columnB"]).toEqual("boolean");
+		});
 	});
 
 	// ---------------
@@ -49,6 +55,27 @@ describe("Module: ggd3.Dataset", function() {
 			expect(dataset.values().length).toEqual(2);
 			expect(dataset.values()[0]).toEqual({"x": 1, "y": 100});
 			expect(dataset.values()[1]).toEqual({"x": 2, "y": 200});
+		});
+
+	});
+
+	// ---------------
+	// Data types
+	// ---------------
+	describe("dataset data types", function() {
+		it("should apply data type coercion to dataset values", function() {
+			var dataset = ggd3.dataset({
+				name: "x1", 
+				dataTypes: {"y": "number", "isAThing": "boolean"},
+				values: [
+					{"x": 1, "y": "100", "isAThing": "true"}, 
+					{"x": 2, "y": "200", "isAThing": "false"} ]
+			});
+			dataset.applyDataTypes();
+			expect(dataset.values()[0]["y"]).toEqual(100);
+			expect(dataset.values()[1]["y"]).toEqual(200);
+			expect(dataset.values()[0]["isAThing"]).toBe(true);
+			expect(dataset.values()[1]["isAThing"]).toBe(false);
 		});
 
 	});

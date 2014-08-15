@@ -111,18 +111,6 @@ describe("Module: ggd3.Renderer", function() {
 		});
 
 		it("should find all values for across layers", function () {
-			// var spec = specOneDatasetNoLayers,
-			// 	plotDef, renderer, vals;
-			// spec.layers = [
-	  //           {
-	  //               "aesmappings": [
-	  //                   {aes: "x", field: "type"},
-	  //                   {aes: "y", field: "y"}
-	  //               ],
-	  //               "data": "data",
-	  //               "geom": "point"
-	  //           }
-	  //       ];
 	        var spec = {
 			        "selector": "#chart",
 			        "coord": "cartesian",
@@ -177,6 +165,97 @@ describe("Module: ggd3.Renderer", function() {
 	        renderer = ggd3.renderer(plotDef);
 	        vals = renderer.allValuesAcrossLayers("x");
 			expect(vals.sort()).toEqual(["a", "a", "a", "b", "c", "d"]);
+		});
+
+		it("should find max for across layers with stacked data", function () {
+	        var spec = {
+			        "selector": "#chart",
+			        "coord": "cartesian",
+			        "data": [
+			            {
+			                "name": "data",
+			                "values": [
+			                    {"x": "x1", "y": 0.5, "type": "a"},
+			                    {"x": "x1", "y": 1.5, "type": "a"},
+			                    {"x": "x1", "y": 2.5, "type": "b"}
+			                ]
+			            },
+			            {
+			                "name": "data2",
+			                "values": [
+			                    {"x": "x1", "y": 0.0, "type": "a"},
+			                    {"x": "x1", "y": 1.0, "type": "b"},
+			                    {"x": "x1", "y": 1.5, "type": "c"},
+			                    {"x": "x2", "y": 2.0, "type": "a"},
+			                    {"x": "x2", "y": 2.5, "type": "b"},
+			                    {"x": "x2", "y": 3.0, "type": "c"}
+			                ]
+			            }
+			        ],
+			        "scales": [
+			            {"name": "x"},
+			            {"name": "y", "domain": [0, 3]}
+			        ],
+			        "axes": [
+			            {"type": "x", "scale": "x"},
+			            {"type": "y", "scale": "y"}
+			        ],
+			        "layers": [
+			            {
+			                "aesmappings": [
+			                    {aes: "x", field: "x"},
+			                    {aes: "y", field: "y"}
+			                ],
+			                "data": "data",
+			                "geom": "point"
+			            },
+			            // This layer is stacked data (stacked bar)
+			            {
+			                "aesmappings": [
+			                    {aes: "x", field: "x"},
+			                    {aes: "y", field: "y"},
+			                    {aes: "fill", field: "type"}
+			                ],
+			                "data": "data2",
+			                "geom": "bar",
+			                "position": "stack"
+			            }
+			        ]
+			    },
+			    plotDef, renderer, val;
+
+	        plotDef = ggd3.plot(spec);
+	        renderer = ggd3.renderer(plotDef);
+	        
+	        // Should sum up the values in the second layer to get
+	        // max as it's a stacked data layer
+
+	        // First method
+	        var layer = plotDef.layers().asArray()[1],
+	        	dataset = plotDef.data().dataset("data2"),
+	        	aes = "y";
+	        val = renderer.layerStackedDataMax(layer, dataset, aes);
+			expect(val).toEqual(7.5);
+
+	        // Second method (uses first method behind the scenes)
+	        val = renderer.statAcrossLayers("y", "max");
+			expect(val).toEqual(7.5);
+		});
+	});
+
+	describe("scales", function() {
+		it("should find scale def", function() {
+			var spec = {
+			        "selector": "#chart",
+			        "coord": "cartesian",
+			        "scales": [
+			            {"name": "x"},
+			            {"name": "y"}
+			        ]
+			    },
+	    		plotDef = ggd3.plot(spec),
+				renderer = ggd3.renderer(plotDef);
+			expect(renderer.scaleDef("x").name()).toEqual("x");
 		});
 	});
 

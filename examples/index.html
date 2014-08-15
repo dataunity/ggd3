@@ -21,6 +21,7 @@
                 <option value="">-- Please choose: --</option>
                 <option value="scatterplot">Scatterplot</option>
                 <option value="bar">Bar</option>
+                <option value="stackedbar">Stacked Bar</option>
             </select>
         </div>
         <div id="chart"></div>
@@ -55,7 +56,7 @@
                                     "aesmappings": [
                                         {aes: "x", field: "sepalWidth"},
                                         {aes: "y", field: "sepalLength"},
-                                        {aes: "color", field: "species", scale: "color"}
+                                        {aes: "fill", field: "species", scale: "color"}
                                     ],
                                     "data": "data",
                                     "geom": "point",
@@ -65,6 +66,7 @@
                             ]
                         };
                         break;
+
                     case "bar":
                         return spec = {
                             "selector": "#chart",
@@ -93,7 +95,83 @@
                                     "aesmappings": [
                                         {aes: "x", field: "Product"},
                                         {aes: "y", field: "Stock"},
-                                        {aes: "color", field: "Product", scale: "color"}
+                                        {aes: "fill", field: "Product", scale: "color"}
+                                    ],
+                                    "data": "data",
+                                    "geom": "bar"
+                                }
+                            ]
+                        };
+                        break;
+
+                    case "stackedbar":
+                        return spec = {
+                            "selector": "#chart",
+                            "coord": "cartesian",
+                            "width": 500,
+                            "height": 400,
+                            "padding": {"left":30, "top":10, "bottom":30, "right":10},
+                            "data": [
+                                {
+                                    "name": "data",
+                                    "url": "data/product_sales.csv",
+                                    "contentType": "text/csv",
+                                    "dataTypes": {"Sales": "number"}
+                                }
+                            ],
+                            "scales": [
+                                {"name": "x", "type": "ordinal"},
+                                {"name": "y", "type": "linear"},
+                                {"name": "color", "type": "category10"},
+                            ],
+                            "axes": [
+                                {"type": "x", "scale": "x"},
+                                {"type": "y", "scale": "y"}
+                            ],
+                            "layers": [
+                                {
+                                    "aesmappings": [
+                                        {aes: "x", field: "Product"},
+                                        {aes: "y", field: "Sales"},
+                                        {aes: "fill", field: "Person", scale: "color"}
+                                    ],
+                                    "data": "data",
+                                    "geom": "bar",
+                                    "position": "stack"
+                                }
+                            ]
+                        };
+                        break;
+
+                    case "pie":
+                        return spec = {
+                            "selector": "#chart",
+                            "coord": "polar",
+                            "width": 500,
+                            "height": 400,
+                            "padding": {"left":30, "top":10, "bottom":30, "right":10},
+                            "data": [
+                                {
+                                    "name": "data",
+                                    "url": "data/product_stock.csv",
+                                    "contentType": "text/csv"
+                                }
+                            ],
+                            "scales": [
+                                {"name": "x", "type": "ordinal"},
+                                {"name": "y", "type": "linear"},
+                                {"name": "color", "type": "category10"},
+                            ],
+                            "axes": [
+                                {"type": "x", "scale": "x"},
+                                {"type": "y", "scale": "y"}
+                            ],
+                            "layers": [
+                                {
+                                    "aesmappings": [
+                                        {aes: "x", field: "Product"},
+                                        {aes: "y", field: "Stock"},
+                                        {aes: "fill", field: "Product", scale: "color"}
                                     ],
                                     "data": "data",
                                     "geom": "bar"
@@ -123,7 +201,7 @@
                 });
             });
 
-            ggd3.ggd3.render(chartSpec("bar"));
+            ggd3.ggd3.render(chartSpec("stackedbar"));
 
         </script>
     </body>

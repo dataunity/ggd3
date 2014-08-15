@@ -29,5 +29,28 @@ describe("Module: ggd3.Layer", function() {
 			expect(layer.aesmappings().findByAes("y").field()).toEqual("field2");
 		});
 
+		it("should initialise the layer with position", function() {
+			var layer = ggd3.layer( {geom: "text", position: "dodge"} );
+			expect(layer.position()).toEqual("dodge");
+		});
+	});
+
+	describe("layer info", function() {
+		it("should identify stacked bar as needing stacked data", function() {
+			var layer = ggd3.layer({
+				geom: "bar",
+				position: "stack",
+				aesmappings: [
+						{
+							aes: "x",
+							field: "field1"
+						},
+						{
+							aes: "fill",
+							field: "field2"
+						}
+					]});
+			expect(layer.useStackedData()).toBe(true);
+		});
 	});
 });

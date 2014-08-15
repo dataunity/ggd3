@@ -18,17 +18,36 @@ ggd3.util = (function () {
 		},
 		countObjKeys = function (obj) {
 			return objKeys(obj).length;
-			// var size = 0, key;
-			// for (key in obj) {
-			// 	if (obj.hasOwnProperty(key)) size++;
-			// }
-			// return size;
+		},
+		deepCopy = function (obj) {
+			return JSON.parse(JSON.stringify(obj));
+		},
+		toBoolean = function(obj){
+			var str;
+			if (obj === null || isUndefined(obj)) {
+				return false;
+			}
+			str = String(obj).trim().toLowerCase();
+			switch(str){
+				case "true": 
+				case "yes": 
+				case "1": 
+					return true;
+				case "false": 
+				case "no": 
+				case "0": 
+					return false;
+				default:
+					return Boolean(str);
+			}
 		};
 
 	return {
 		isUndefined: isUndefined,
 		objKeys: objKeys,
-		countObjKeys: countObjKeys
+		countObjKeys: countObjKeys,
+		deepCopy: deepCopy,
+		toBoolean: toBoolean
 	}
 })();
 
@@ -67,7 +86,8 @@ ggd3.Dataset = (function() {
 			name: spec.name,
 			values: spec.values || null,
 			url: spec.url || null,
-			contentType: spec.contentType || null
+			contentType: spec.contentType || null,
+			dataTypes: spec.dataTypes || {}
 		};
 		//if (s) ggd3.extend(this.dataset, s);
 	};
@@ -99,6 +119,50 @@ ggd3.Dataset = (function() {
 		this.dataset.contentType = val;
 		return this;
 	};
+
+	prototype.dataTypes = function (val) {
+		if (!arguments.length) return this.dataset.dataTypes;
+		this.dataset.dataTypes = val;
+		return this;
+	};
+
+	prototype.applyDataTypes = function () {
+		// Applies the user supplied data types
+		// to values in dataset
+		var dataTypes = this.dataTypes(),
+			values = this.values(),
+			isUndefined = ggd3.util.isUndefined,
+			toBoolean = ggd3.util.toBoolean,
+			fieldName, dataType, i, val;
+
+		if (!values) {
+			return;
+		}
+
+		for (fieldName in dataTypes) {
+			dataType = dataTypes[fieldName];
+			switch (dataType) {
+				case "number":
+					for (i = 0; i < values.length; i++) {
+						val = values[i][fieldName];
+						if (!isUndefined(val)) {
+							values[i][fieldName] = +val;
+						}
+					}
+					break;
+				case "boolean":
+					for (i = 0; i < values.length; i++) {
+						val = values[i][fieldName];
+						if (!isUndefined(val)) {
+							values[i][fieldName] = toBoolean(val);
+						}
+					}
+					break;
+				default:
+					throw "Can't apply data type, unrecognised data type " + dataType;
+			}
+		}
+	}
 
 	return dataset;
 })();
@@ -493,6 +557,7 @@ ggd3.Layer = (function () {
 		this.layer = {
 			data: spec.data || null,
 			geom: spec.geom || null,
+			position: spec.position || null,
 			aesmappings: ggd3.aesmappings(spec.aesmappings || [])
 		};
 		//if (s) ggd3.extend(this.layer, s);
@@ -512,12 +577,25 @@ ggd3.Layer = (function () {
 		return this;
 	};
 
+	prototype.position = function (val) {
+		if (!arguments.length) return this.layer.position;
+		this.layer.position = val;
+		return this;
+	};
+
 	prototype.aesmappings = function (val) {
 		if (!arguments.length) return this.layer.aesmappings;
 		// ToDo: should val be obj or Axes (or either)?
 		this.layer.aesmappings = val;
 		return this;
 	};
+
+	prototype.useStackedData = function () {
+		if (this.geom() === "bar" && this.position() === "stack") {
+			return true;
+		}
+		return false;
+	}
 
 	return layer;
 })();
@@ -731,12 +809,14 @@ ggd3.Renderer = (function (d3) {
 		var plotDef = this.plotDef(),
 			datasetNames = plotDef.data().names(),
 			loadData = function (url, datasetName, contentType, callback) {
-				var contentTypeLC = contentType ? contentType.toLowerCase() : contentType;
+				var contentTypeLC = contentType ? contentType.toLowerCase() : contentType,
+					dataset = plotDef.data().dataset(datasetName);
 				switch (contentTypeLC) {
 					case "text/csv":
 						d3.csv(url, function(err, res) {
 							if (err) throw "Error fetching CSV results: " + err.statusText;
-							plotDef.data().dataset(datasetName).values(res);
+							dataset.values(res);
+							dataset.applyDataTypes();
 							callback(null, res);
 						});
 						break;
@@ -744,14 +824,16 @@ ggd3.Renderer = (function (d3) {
 					case "text/tab-separated-values":
 						d3.tsv(url, function(err, res) {
 							if (err) throw "Error fetching TSV results: " + err.statusText;
-							plotDef.data().dataset(datasetName).values(res);
+							dataset.values(res);
+							dataset.applyDataTypes();
 							callback(null, res);
 						});
 						break;
 					case "application/json":
 						d3.json(url, function(err, res) {
 							if (err) throw "Error fetching JSON results: " + err.statusText;
-							plotDef.data().dataset(datasetName).values(res);
+							dataset.values(res);
+							dataset.applyDataTypes();
 							callback(null, res);
 						});
 						break;
@@ -854,6 +936,7 @@ ggd3.Renderer = (function (d3) {
 		var plotDef = this.plotDef(),
 			plotHeight = plotDef.plotAreaHeight(),
 			aesmappings = layerDef.aesmappings(),
+			fillAesMap = aesmappings.findByAes("fill"),
 			xField = aesmappings.findByAes("x").field(),
 			yField = aesmappings.findByAes("y").field(),
 			xScale = this.xAxis().scale(),
@@ -861,20 +944,47 @@ ggd3.Renderer = (function (d3) {
 			datasetName = layerDef.data(),
 			dataset = plotDef.data().dataset(datasetName),
 			values = dataset.values(),
+			isStacked = false,
 			bars;
+
+		// Stacked/dodged bar charts
+		if (fillAesMap != null && fillAesMap.field() !== xField) {
+			// ToDo: dodge bar charts
+			isStacked = true;
+			// Work out new baseline for each x value
+			var fillScaleDef = this.scaleDef(fillAesMap.scale());
+			if (fillScaleDef == null) {
+				throw "No scale could be found for fill scale " + fillAesMap.scale();
+			}
+
+			if (this.xAxisScaleDef().isOrdinal() && fillScaleDef.isOrdinal()) {
+				values = ggd3.dataHelper.generateStackYValues(values, xField, fillAesMap.field(), yField);
+			} else {
+				throw "Do not know how to draw stacked/dodged bars with non ordinal scales."
+			}
+			console.log(values);
+		}
 
 		bars = plotArea.selectAll("rect.ggd3-bar")
 				.data(values)
 			.enter().append("rect")
 				.attr("class", "ggd3-bar")
 				.attr("x", function(d) { return xScale(d[xField]); })
-				.attr("y", function(d) { return yScale(d[yField]); })
+				.attr("y", function(d) { 
+					if (isStacked) {
+						return yScale(d[yField] + d["__y0__"]); 
+					} else {
+						return yScale(d[yField]); 
+					}
+				})
 				.attr("height", function(d) { return plotHeight - yScale(d[yField]); })
 				.attr("width", xScale.rangeBand());
 
 		this.applyFillColour(bars, aesmappings);
 		
 	};
+
+	
 
 	prototype.applyFillColour = function (svgItems, aesmappings) {
 		// Applies fill colour to svg elements
@@ -887,14 +997,13 @@ ggd3.Renderer = (function (d3) {
 		// are matched across layers
 		console.log("Warning: move colour mapping to all levels.");
 		var plotDef = this.plotDef(),
-			colorAesMap = aesmappings.findByAes("color");
-		if (colorAesMap) {
-			var colorField = colorAesMap.field(),
-				colorScaleRef = colorAesMap.scale(),
-				colorScaleDef = plotDef.scales().scale(colorScaleRef),
+			fillAesMap = aesmappings.findByAes("fill");
+		if (fillAesMap != null) {
+			var colorField = fillAesMap.field(),
+				colorScaleDef = this.scaleDef(fillAesMap.scale()),
 				colorScale;
-			if (colorScaleRef == null) {
-				this.warning("Couldn't set colour on point layer - no valid colour scale.")
+			if (colorScaleDef == null) {
+				this.warning("Couldn't set colour on layer - no valid colour scale.")
 			} else {
 				colorScale = this.scale(colorScaleDef);
 				svgItems.style("fill", function(d) { return colorScale(d[colorField]); });
@@ -943,6 +1052,20 @@ ggd3.Renderer = (function (d3) {
 		return this;
 	};
 
+	prototype.xAxisScaleDef = function (val) {
+		if (!arguments.length) return this.renderer.xAxisScaleDef;
+		this.renderer.xAxisScaleDef = val;
+		return this;
+	};
+
+	prototype.yAxisScaleDef = function (val) {
+		if (!arguments.length) return this.renderer.yAxisScaleDef;
+		this.renderer.yAxisScaleDef = val;
+		return this;
+	};
+
+	
+
 	prototype.statAcrossLayers = function (aes, stat) {
 		// Looks at the data across all layers for an
 		// aesthetic and gets info about it (e.g. max or min)
@@ -955,6 +1078,8 @@ ggd3.Renderer = (function (d3) {
 		for (i = 0; i < layers.length; i++) {
 			layer = layers[i];
 			aesmap = layer.aesmappings().findByAes(aes);
+
+			// Layer data
 			datasetName = layer.data();
 			if (!datasetName) {
 				datasetName = plotDef.defaultDatasetName();
@@ -966,7 +1091,13 @@ ggd3.Renderer = (function (d3) {
 
 			if (aesmap) {
 				field = aesmap.field();
-				tmpStat = ggd3.dataHelper.datatableStat(dataset.values(), field, stat);
+				if (stat === "max" && layer.useStackedData()) {
+					// Stack data
+					tmpStat = this.layerStackedDataMax(layer, dataset, aes);
+				} else {
+					// Normal case for finding aes value
+					tmpStat = ggd3.dataHelper.datatableStat(dataset.values(), field, stat);
+				}
 				if (!isNaN(tmpStat)) {
 					if (statVal == null) statVal = tmpStat;
 					statVal = stat === "min" ? Math.min(statVal, tmpStat) : Math.max(statVal, tmpStat);
@@ -976,6 +1107,36 @@ ggd3.Renderer = (function (d3) {
 
 		return statVal;
 	};
+
+	prototype.layerStackedDataMax = function (layer, dataset, aes) {
+		// Find the max value for the stacked data on this level.
+		// Highest value for stacked data is sum of values in group, 
+		// not the highest value across the whole value column
+		var tmpStat,
+			xAes = layer.aesmappings().findByAes("x"), 
+			fillAes = layer.aesmappings().findByAes("fill"),
+			valueAes = layer.aesmappings().findByAes(aes);
+
+		if (valueAes == null) {
+			throw "Need value aes map to find stacked value";
+		}
+		if (xAes == null) {
+			throw "Need x aes map to find stacked value";
+		}
+		if (fillAes == null) {
+			throw "Need fill aes map to find stacked value";
+		}
+
+		if (aes === "y") {
+			// ToDo: is the fill aes the only way to specify stacked figures?
+			tmpStat = ggd3.dataHelper.maxStackValue(dataset.values(), 
+				xAes.field(), fillAes.field(), valueAes.field());
+		} else {
+			throw "Don't know how to find stacked value for value aes " + aes;
+		}
+
+		return tmpStat;
+	}
 
 	prototype.allValuesAcrossLayers = function (aes) {
 		// Looks at the data across all layers for an
@@ -989,6 +1150,8 @@ ggd3.Renderer = (function (d3) {
 		for (i = 0; i < layers.length; i++) {
 			layer = layers[i];
 			aesmap = layer.aesmappings().findByAes(aes);
+
+			// Layer data
 			datasetName = layer.data();
 			if (!datasetName) {
 				datasetName = plotDef.defaultDatasetName();
@@ -1068,6 +1231,7 @@ ggd3.Renderer = (function (d3) {
 
 		axis.ticks(5);
 
+		this.xAxisScaleDef(scaleDef);
 		this.xAxis(axis);
 	};
 
@@ -1094,11 +1258,16 @@ ggd3.Renderer = (function (d3) {
 
 		axis.ticks(5);
 
+		this.yAxisScaleDef(scaleDef);
 		this.yAxis(axis);
 	};
 
+	prototype.scaleDef = function (scaleName) {
+		return this.plotDef().scales().scale(scaleName);
+	};
+
 	prototype.scale = function (scaleDef) {
-		// Produces D3 scale
+		// Produces D3 scale from ggd3 scale definition
 		var scale = null;
 		scaleDef = scaleDef || ggd3.scale({});
 		switch (scaleDef.type()) {
@@ -1110,6 +1279,9 @@ ggd3.Renderer = (function (d3) {
 				break;
 			case "pow":
 				scale = d3.scale.pow();
+				break;
+			case "time":
+				scale = d3.time.scale();
 				break;
 			case "category10":
 				scale = d3.scale.category10();
@@ -1145,6 +1317,10 @@ ggd3.dataHelper = (function (d3) {
 			// Finds the max value of the field in the datatable
 			return d3.max(datatable, function (d) { return d[field]; });
 		},
+		datatableSum = function (datatable, field) {
+			// Finds the sum of values for the field in the datatable
+			return d3.sum(datatable, function (d) { return d[field]; });
+		},
 		datatableStat = function (datatable, field, stat) {
 			// Finds the value of the stat (e.g. max) for the field in the datatable
 			var statVal = null;
@@ -1152,6 +1328,9 @@ ggd3.dataHelper = (function (d3) {
 				case "min":
 				case "max":
 					statVal = stat === "min" ? datatableMin(datatable, field) : datatableMax(datatable, field);
+					break;
+				case "sum":
+					statVal = datatableSum(datatable, field);
 					break;
 				default:
 					throw "Can't get datatables stat, unknown stat " + stat;
@@ -1178,13 +1357,67 @@ ggd3.dataHelper = (function (d3) {
 			}
 
 			return statVal;
-		};
+		},
+		generateStackYValues = function (data, groupField, stackField, valueField) {
+			// Adds an extra y value called __y0__ to the data
+			// which gives the y value of the previous record within
+			// the stacked items of the group.
+			// Useful for stacked bar charts where an extra y value is
+			// needed to know where the last bar in the group was placed.
+			var dataCopy = ggd3.util.deepCopy(data),
+				nested = d3.nest()
+					.key(function (d) { return d[groupField]; })
+					.key(function (d) { return d[stackField]; })
+					.entries(dataCopy),
+				groupKeys, stackKeys, values,
+				i, j, k, prevValue;
+
+			for (i = 0; i < nested.length; i++) {
+				// Group 1 level
+				prevValue = 0;
+				groupKeys = nested[i];
+				for (j = 0; j < groupKeys.values.length; j++) {
+					// Group 2 level
+					stackKeys = groupKeys.values[j];
+					for (k = 0; k < stackKeys.values.length; k++) {
+						// Values level
+						values = stackKeys.values[k];
+						values["__y0__"] = prevValue;
+						prevValue += values[valueField];
+					}
+				}
+			}
+
+			return dataCopy;
+		},
+		maxStackValue = function (data, groupField, stackField, valueField) {
+			// Finds the max value by summing stacked items within a group,
+			// then find the max across groups.
+			// For example it finds the max height of all the layers bars in
+			// a stacked bar chart.
+			var nested_data, max;
+
+			// Get sum of each stack grouping
+			nested_data = d3.nest()
+				.key(function(d) { return d[groupField]; })
+				//.key(function(d) { return d[stackField]; })
+				.rollup(function(leaves) { return {"stack_sum": d3.sum(leaves, function(d) {return d[valueField];})} })
+				.entries(data);
+
+			// Find max value across stack groupings
+			max = d3.max(nested_data, function (d) { return d.values.stack_sum; })
+
+			return max;
+		};;
 
 	return {
 		datatableMin: datatableMin,
 		datatableMax: datatableMax,
+		datatableSum: datatableSum,
 		datatableStat: datatableStat,
-		datatablesStat: datatablesStat
+		datatablesStat: datatablesStat,
+		generateStackYValues: generateStackYValues,
+		maxStackValue: maxStackValue
 	}
 })(d3);
 

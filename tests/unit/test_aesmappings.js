@@ -20,6 +20,11 @@ describe("Module: ggd3.AesMappings", function() {
 			expect(aesmappings.findByAes("x").field()).toEqual("myField");
 		});
 
+		it("should return null for unknown aesmapping", function() {
+			var aesmappings = ggd3.aesmappings( [] );
+			expect(aesmappings.findByAes("missing")).toBe(null);
+		});
+
 		it("should get aesmappings as array", function() {
 			var aesmappings = ggd3.aesmappings([
 				{aes: "x", field: "myField1"},
