@@ -833,6 +833,12 @@ ggd3.Renderer = (function (d3) {
 		this.renderer.warnings.push(warning);
 	}
 
+	prototype.warnings = function (val) {
+		if (!arguments.length) return this.renderer.warnings;
+		this.renderer.warnings = val;
+		return this;
+	};
+
 	prototype.render = function () {
 		var this_ = this;
 		d3.select(this.plotDef().selector()).select("svg").remove();
@@ -947,6 +953,11 @@ ggd3.Renderer = (function (d3) {
 				case "bar":
 					this.drawBarLayer(plotArea, layerDef);
 					break;
+				case "text":
+					this.drawTextLayer(plotArea, layerDef);
+					break;
+				default:
+					throw "Cannot draw layer, geom type not supported: " + layerDef.geom();
 			}
 		}
 	};
@@ -969,14 +980,55 @@ ggd3.Renderer = (function (d3) {
 			.enter().append("circle")
 				.attr("class", "ggd3-point")
 				.attr("r", 3.5)
-				.attr("cx", function(d) { return xScale(d[xField]); })
-				.attr("cy", function(d) { return yScale(d[yField]); });
+				.attr("cx", function (d) { return xScale(d[xField]); })
+				.attr("cy", function (d) { return yScale(d[yField]); });
 
 		this.applyFillColour(points, aesmappings);
 		
 	};
 
+	prototype.drawTextLayer = function (plotArea, layerDef) {
+		// Draws text onto the plot area
+		// Similar to point layer rendering
+		var plotDef = this.plotDef(),
+			aesmappings = layerDef.aesmappings(),
+			xAes = aesmappings.findByAes("x"),
+			yAes = aesmappings.findByAes("y"),
+			labelAes = aesmappings.findByAes("label"),
+			xScale = this.xAxis().scale(),
+			yScale = this.yAxis().scale(),
+			datasetName = layerDef.data(),
+			dataset = plotDef.data().dataset(datasetName),
+			values = dataset.values(),
+			xField, yField, labelField,
+			points;
 
+		if (xAes == null) throw "Cannot draw text layer, x aesthetic no specified";
+		if (yAes == null) throw "Cannot draw text layer, y aesthetic no specified";
+
+		xField = xAes.field();
+		yField = yAes.field();
+		labelField = labelAes == null ? null : labelAes.field();
+		if (labelField == null) {
+			this.warning("No text field supplied for text layer, label will be blank.");
+		}
+
+		points = plotArea.selectAll("text.ggd3-label")
+				.data(values)
+			.enter().append("text")
+				.attr("class", "ggd3-label")
+				.attr("x", function (d) { return xScale(d[xField]); })
+				.attr("y", function (d) { return yScale(d[yField]); })
+				.text(function (d) { 
+					if (labelField != null) {
+						return d[labelField];
+					} else {
+						return "";
+					}
+				});
+
+		//this.applyFillColour(points, aesmappings);
+	};
 
 	prototype.drawBarLayer = function (plotArea, layerDef) {
 		// Draws bars onto the plot area

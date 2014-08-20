@@ -12,3 +12,7 @@
 .ggd3-point {
 	stroke: #000;
 }
+
+.ggd3-label {
+	font: 12px sans-serif;
+}

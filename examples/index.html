@@ -30,7 +30,7 @@
             function chartSpec (chartType) {
                 switch (chartType) {
                     case "scatterplot":
-                        return spec = {
+                        return {
                             "selector": "#chart",
                             "coord": "cartesian",
                             "width": 500,
@@ -69,7 +69,7 @@
                         break;
 
                     case "bar":
-                        return spec = {
+                        return {
                             "selector": "#chart",
                             "coord": "cartesian",
                             "width": 500,
@@ -93,20 +93,30 @@
                             ],
                             "layers": [
                                 {
+                                    "data": "data",
+                                    "geom": "bar",
                                     "aesmappings": [
                                         {aes: "x", field: "Product"},
                                         {aes: "y", field: "Stock"},
                                         {aes: "fill", field: "Product", scale: "color"}
-                                    ],
+                                    ]
+                                },
+                                {
                                     "data": "data",
-                                    "geom": "bar"
+                                    "geom": "text",
+                                    "aesmappings": [
+                                        {aes: "x", field: "Product"},
+                                        {aes: "y", field: "Stock"},
+                                        {aes: "label", field: "Stock"},
+                                        {aes: "fill", field: "Product", scale: "color"}
+                                    ]
                                 }
                             ]
                         };
                         break;
 
                     case "stackedbar":
-                        return spec = {
+                        return {
                             "selector": "#chart",
                             "coord": "cartesian",
                             "width": 500,
@@ -145,7 +155,7 @@
                         break;
 
                     case "coxcomb":
-                        return spec = {
+                        return {
                             "selector": "#chart",
                             "coord": "polar",
                             "width": 500,
@@ -186,13 +196,23 @@
             }
 
             function drawChart (chartType) {
-                var spec = chartSpec(chartType);
+                var spec = chartSpec(chartType),
+                    plotDef, renderer, i;
                 if (spec == null) {
                     $("#feedback").text("No spec for the requested chart type.");
                 } else {
                     $("#feedback").text("");
                 }
-                ggd3.ggd3.render(spec);
+                plotDef = ggd3.plot(spec);
+                renderer = ggd3.renderer(plotDef);
+                renderer.render(plotDef);
+                // ToDo: warnings wont work as rendering is async
+                // if (renderer.warnings() && renderer.warnings().length > 0) {
+                //     console.log("There were warnings whilst rendering:");
+                //     for (i = 0; i < renderer.warnings().length; i++) {
+                //         console.log(renderer.warnings()[i]);
+                //     }
+                // }
             }
 
             $(document).ready(function () {
@@ -202,7 +222,8 @@
                 });
             });
 
-            ggd3.ggd3.render(chartSpec("coxcomb"));
+            drawChart("bar");
+            //ggd3.ggd3.render(chartSpec("bar"));
 
         </script>
     </body>
