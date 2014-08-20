@@ -554,6 +554,7 @@ ggd3.Layer = (function () {
 	// 		stat="smooth")
 	// Ref [lg] 3.1
 	var layer = function(spec) {
+		var fillAesMap, xAesMap;
 		this.layer = {
 			data: spec.data || null,
 			geom: spec.geom || null,
@@ -561,6 +562,19 @@ ggd3.Layer = (function () {
 			aesmappings: ggd3.aesmappings(spec.aesmappings || [])
 		};
 		//if (s) ggd3.extend(this.layer, s);
+
+		fillAesMap = this.layer.aesmappings.findByAes("fill");
+		xAesMap = this.layer.aesmappings.findByAes("x");
+
+		// Set defaults
+		if (this.geom() === "bar" && this.position() === "stack" &&
+			fillAesMap != null && xAesMap != null && 
+			fillAesMap.field() !== xAesMap.field()) {
+			this.layer.useStackedData = true;
+		} else {
+			this.layer.useStackedData = false;
+		}
+		
 	};
 
 	var prototype = layer.prototype;
@@ -590,12 +604,18 @@ ggd3.Layer = (function () {
 		return this;
 	};
 
-	prototype.useStackedData = function () {
-		if (this.geom() === "bar" && this.position() === "stack") {
-			return true;
-		}
-		return false;
-	}
+	prototype.useStackedData = function (val) {
+		if (!arguments.length) return this.layer.useStackedData;
+		this.layer.useStackedData = val;
+		return this;
+	};
+
+	// prototype.useStackedData = function () {
+	// 	if (this.geom() === "bar" && this.position() === "stack") {
+	// 		return true;
+	// 	}
+	// 	return false;
+	// }
 
 	return layer;
 })();
@@ -749,6 +769,21 @@ ggd3.Plot = (function () {
 	};
 
 	// ----------------------
+	// Axis information
+	// ----------------------
+
+	prototype.yAxisHeight = function () {
+		switch (this.coord()) {
+			case "cartesian":
+				return this.plotAreaHeight();
+			case "polar":
+				return Math.floor(this.plotAreaHeight() / 2);
+			default:
+				throw "Can't get y axis height, unknown co-ordinate system " + this.coord(); 
+		}
+	};
+
+	// ----------------------
 	// Data information
 	// ----------------------
 
@@ -889,8 +924,18 @@ ggd3.Renderer = (function (d3) {
 			layerDefs = plotDef.layers().asArray(),
 			i, layerDef, plotArea;
 
-		plotArea = plot.append("g")
-			.attr("transform", "translate(" + plotDef.plotAreaX() + "," + plotDef.plotAreaY() + ")");
+		switch (plotDef.coord()) {
+			case "cartesian":
+				plotArea = plot.append("g")
+					.attr("transform", "translate(" + plotDef.plotAreaX() + "," + plotDef.plotAreaY() + ")");
+				break;
+			case "polar":
+				plotArea = plot.append("g")
+					.attr("transform", "translate(" + (plotDef.plotAreaX() + Math.floor(plotDef.plotAreaWidth() / 2)) + "," + (plotDef.plotAreaY() + Math.floor(plotDef.plotAreaHeight() / 2)) + ")");
+				break;
+		}
+		//plotArea = plot.append("g")
+		//	.attr("transform", "translate(" + plotDef.plotAreaX() + "," + plotDef.plotAreaY() + ")");
 
 		for (i = 0; i < layerDefs.length; i++) {
 			layerDef = layerDefs[i];
@@ -931,10 +976,12 @@ ggd3.Renderer = (function (d3) {
 		
 	};
 
+
+
 	prototype.drawBarLayer = function (plotArea, layerDef) {
 		// Draws bars onto the plot area
 		var plotDef = this.plotDef(),
-			plotHeight = plotDef.plotAreaHeight(),
+			yAxisHeight = plotDef.yAxisHeight(),
 			aesmappings = layerDef.aesmappings(),
 			fillAesMap = aesmappings.findByAes("fill"),
 			xField = aesmappings.findByAes("x").field(),
@@ -944,13 +991,12 @@ ggd3.Renderer = (function (d3) {
 			datasetName = layerDef.data(),
 			dataset = plotDef.data().dataset(datasetName),
 			values = dataset.values(),
-			isStacked = false,
+			isStacked = layerDef.useStackedData(),
 			bars;
 
 		// Stacked/dodged bar charts
-		if (fillAesMap != null && fillAesMap.field() !== xField) {
-			// ToDo: dodge bar charts
-			isStacked = true;
+		// ToDo: dodge bar charts
+		if (isStacked) {
 			// Work out new baseline for each x value
 			var fillScaleDef = this.scaleDef(fillAesMap.scale());
 			if (fillScaleDef == null) {
@@ -962,10 +1008,25 @@ ggd3.Renderer = (function (d3) {
 			} else {
 				throw "Do not know how to draw stacked/dodged bars with non ordinal scales."
 			}
-			console.log(values);
 		}
 
-		bars = plotArea.selectAll("rect.ggd3-bar")
+		switch (plotDef.coord()) {
+			case "cartesian":
+				bars = this.drawCartesianBars(plotArea, values, xField, yField, xScale, yScale, yAxisHeight, isStacked);
+				break;
+			case "polar":
+				bars = this.drawPolarBars(plotArea, values, xField, yField, xScale, yScale, yAxisHeight, isStacked);
+				break;
+			default:
+				throw "Don't know how to draw bars for co-ordinate system " + plotDef.coord();
+		}
+
+		this.applyFillColour(bars, aesmappings);
+		
+	};
+
+	prototype.drawCartesianBars = function (plotArea, values, xField, yField, xScale, yScale, yAxisHeight, isStacked) {
+		var bars = plotArea.selectAll("rect.ggd3-bar")
 				.data(values)
 			.enter().append("rect")
 				.attr("class", "ggd3-bar")
@@ -977,14 +1038,28 @@ ggd3.Renderer = (function (d3) {
 						return yScale(d[yField]); 
 					}
 				})
-				.attr("height", function(d) { return plotHeight - yScale(d[yField]); })
+				.attr("height", function(d) { return yAxisHeight - yScale(d[yField]); })
 				.attr("width", xScale.rangeBand());
-
-		this.applyFillColour(bars, aesmappings);
-		
+		return bars;
 	};
 
-	
+	prototype.drawPolarBars = function (plotArea, values, xField, yField, xScale, yScale, yAxisHeight, isStacked) {
+		var arc, bars;
+
+		arc = d3.svg.arc()
+	        .innerRadius(0)
+	        //.outerRadius(150)
+	        .outerRadius(function (d) {return yAxisHeight - yScale(d[yField]); })
+	        .startAngle(function (d) { console.log("startAngle d: " + d[xField]); console.log("startAngle: " + xScale(d[xField])); return xScale(d[xField]); })
+	        .endAngle(function (d) { console.log("endAngle d: " + d[xField]); console.log("endAngle: " + xScale(d[xField]) + xScale.rangeBand()); return xScale(d[xField]) + xScale.rangeBand(); });
+
+		bars = plotArea.selectAll("path.ggd3-arc")
+				.data(values)
+			.enter().append("path")
+				.attr("class", "ggd3-arc")
+				.attr("d", arc)
+		return bars;
+	};
 
 	prototype.applyFillColour = function (svgItems, aesmappings) {
 		// Applies fill colour to svg elements
@@ -1034,6 +1109,9 @@ ggd3.Renderer = (function (d3) {
 					.call(yAxis);
 				// ToDo: append x axis title
 
+				break;
+			case "polar":
+				console.log("Draw polar axes");
 				break;
 			default:
 				throw "Unrecognised coordinate system used."
@@ -1219,12 +1297,24 @@ ggd3.Renderer = (function (d3) {
 		// ToDo: account for facets
 		//x.domain(d3.extent(data, function(d) { return d.sepalWidth; })).nice();
 
-		// X scale range is always width of plot area
+		// Set scale range
 		// ToDo: account for facets
-		scale.range([0, plotDef.plotAreaWidth()]);
-		if (scaleDef.isOrdinal()) {
-			scale.rangeRoundBands([0, plotDef.plotAreaWidth()], .1);
+		switch (plotDef.coord()) {
+			case "cartesian":
+				// X scale range is always width of plot area
+				scale.range([0, plotDef.plotAreaWidth()]);
+				if (scaleDef.isOrdinal()) {
+					scale.rangeRoundBands([0, plotDef.plotAreaWidth()], .1);
+				}
+				break;
+			case "polar":
+				scale.range([0, 2 * Math.PI]);
+				if (scaleDef.isOrdinal()) {
+					scale.rangeBands([0, 2 * Math.PI], 0);
+				}
+				break;
 		}
+		
 
 		this.setupAxisScale("x", scale, scaleDef);
 		axis.scale(scale);
@@ -1248,10 +1338,18 @@ ggd3.Renderer = (function (d3) {
 		// ToDo: determine if domain has been manually set on y axis
 		// ToDo: account for facets
 		//y.domain(d3.extent(data, function(d) { return d.sepalLength; })).nice();
-
-		// Y scale range is always height of plot area
+		
 		// ToDo: account for facets
-		scale.range([plotDef.plotAreaHeight(), 0]);
+		switch (plotDef.coord()) {
+			case "cartesian":
+				// Y scale range is height of plot area
+				scale.range([plotDef.plotAreaHeight(), 0]);
+				break;
+			case "polar":
+				// Y scale range is half height of plot area
+				scale.range([Math.floor(plotDef.plotAreaHeight() / 2), 0]);
+				break;
+		}
 
 		this.setupAxisScale("y", scale, scaleDef);
 		axis.scale(scale);

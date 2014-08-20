@@ -150,6 +150,35 @@ describe("Module: ggd3.Plot", function() {
 	});
 
 	// -----------------------
+	// Axis info
+	// -----------------------
+	describe("plot axis info", function() {
+		it("should get the y axis height for cartesian coords", function() {
+			var plot = ggd3.plot({
+				"coord": "cartesian",
+				height: 400,
+				padding: {
+					top: 60,
+					bottom: 40
+				}
+			});
+			expect(plot.yAxisHeight()).toEqual(300);
+		});
+
+		it("should get the y axis height for polar coords", function() {
+			var plot = ggd3.plot({
+				"coord": "polar",
+				height: 400,
+				padding: {
+					top: 60,
+					bottom: 40
+				}
+			});
+			expect(plot.yAxisHeight()).toEqual(150);
+		});
+	});
+
+	// -----------------------
 	// Data
 	// -----------------------
 	describe("plot data", function() {

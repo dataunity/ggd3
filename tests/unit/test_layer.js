@@ -41,14 +41,8 @@ describe("Module: ggd3.Layer", function() {
 				geom: "bar",
 				position: "stack",
 				aesmappings: [
-						{
-							aes: "x",
-							field: "field1"
-						},
-						{
-							aes: "fill",
-							field: "field2"
-						}
+						{ aes: "x", field: "field1" },
+						{ aes: "fill", field: "field2" }
 					]});
 			expect(layer.useStackedData()).toBe(true);
 		});
