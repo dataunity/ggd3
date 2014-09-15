@@ -205,7 +205,7 @@
                 }
                 plotDef = ggd3.plot(spec);
                 renderer = ggd3.renderer(plotDef);
-                renderer.render(plotDef);
+                renderer.render();
                 // ToDo: warnings wont work as rendering is async
                 // if (renderer.warnings() && renderer.warnings().length > 0) {
                 //     console.log("There were warnings whilst rendering:");
