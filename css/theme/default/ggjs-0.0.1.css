@@ -1,18 +1,18 @@
-.ggd3-axis path,
-.ggd3-axis line {
+.ggjs-axis path,
+.ggjs-axis line {
 	fill: none;
 	stroke: #000;
 	shape-rendering: crispEdges;
 }
 
-.ggd3-axis g.tick text {
+.ggjs-axis g.tick text {
 	font: 12px sans-serif;
 }
 
-.ggd3-point {
+.ggjs-point {
 	stroke: #000;
 }
 
-.ggd3-label {
+.ggjs-label {
 	font: 12px sans-serif;
 }

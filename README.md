@@ -1,4 +1,4 @@
-GGD3
+GGJS
 ====
 
-Please [see the project wiki](https://github.com/dataunity/ggd3/wiki) for details.
+Please [see the project wiki](https://github.com/dataunity/ggjs/wiki) for details.

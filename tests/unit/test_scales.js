@@ -1,14 +1,14 @@
-describe("Module: ggd3.Scales", function() {
+describe("Module: ggjs.Scales", function() {
 	
 	describe("scales initialisation", function() {
 		it("should initialise the scales with one scale", function() {
-			var scales = ggd3.scales( [{name: "a", type: "pow"}] );
+			var scales = ggjs.scales( [{name: "a", type: "pow"}] );
 			expect(scales.count()).toEqual(1);
 			expect(scales.scale("a").type()).toEqual("pow");
 		});
 
 		it("should initialise the scales with two scales", function() {
-			var scales = ggd3.scales([
+			var scales = ggjs.scales([
 				{name: "a", type: "pow"}, 
 				{name: "b", type: "linear"}
 			] );

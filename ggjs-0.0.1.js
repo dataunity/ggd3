@@ -1,10 +1,10 @@
-var ggd3 = ggd3 || {};
+var ggjs = ggjs || {};
 
 // ------------------
 // Utilities
 // ------------------
 
-ggd3.util = (function () {
+ggjs.util = (function () {
 	var isUndefined = function (val) {
 			return typeof val === 'undefined';
 		},
@@ -51,7 +51,7 @@ ggd3.util = (function () {
 	}
 })();
 
-ggd3.util.array = (function () {
+ggjs.util.array = (function () {
 	var indexOf = function(arr, item) {
 			// Finds the index of item in array
             var index = -1,
@@ -78,10 +78,10 @@ ggd3.util.array = (function () {
 // Datasets
 // ------------------
 
-ggd3.Dataset = (function() {
+ggjs.Dataset = (function() {
 	var dataset = function(spec) {
 		spec = spec || {};
-		if (ggd3.util.isUndefined(spec.name)) throw "The dataset name must be defined";
+		if (ggjs.util.isUndefined(spec.name)) throw "The dataset name must be defined";
 		this.dataset = {
 			name: spec.name,
 			values: spec.values || null,
@@ -89,7 +89,7 @@ ggd3.Dataset = (function() {
 			contentType: spec.contentType || null,
 			dataTypes: spec.dataTypes || {}
 		};
-		//if (s) ggd3.extend(this.dataset, s);
+		//if (s) ggjs.extend(this.dataset, s);
 	};
 
 	var prototype = dataset.prototype;
@@ -131,8 +131,8 @@ ggd3.Dataset = (function() {
 		// to values in dataset
 		var dataTypes = this.dataTypes(),
 			values = this.values(),
-			isUndefined = ggd3.util.isUndefined,
-			toBoolean = ggd3.util.toBoolean,
+			isUndefined = ggjs.util.isUndefined,
+			toBoolean = ggjs.util.toBoolean,
 			fieldName, dataType, i, val;
 
 		if (!values) {
@@ -167,17 +167,17 @@ ggd3.Dataset = (function() {
 	return dataset;
 })();
 
-ggd3.dataset = function (s) {
-  return new ggd3.Dataset(s);
+ggjs.dataset = function (s) {
+  return new ggjs.Dataset(s);
 };
 
-ggd3.Data = (function () {
+ggjs.Data = (function () {
 	var datasets = function (s) {
 		var i, dataset;
 		this.datasets = {};
 		if (s) {
 			for (i = 0; i < s.length; i++) {
-				dataset = ggd3.dataset(s[i]);
+				dataset = ggjs.dataset(s[i]);
 				this.datasets[dataset.name()] = dataset;
 			}
 		}
@@ -189,24 +189,24 @@ ggd3.Data = (function () {
 		// ToDo: Get or set dataset
 		if (arguments.length < 1) throw "dataset function needs datasetName argument.";
 		if (arguments.length == 1) return this.datasets[datasetName];
-		// ToDo: set as object, ggd3 dataset (or either)?
-		this.datasets[datasetName] = ggd3.dataset(dataset);
+		// ToDo: set as object, ggjs dataset (or either)?
+		this.datasets[datasetName] = ggjs.dataset(dataset);
 		return this;
 	};
 
 	prototype.count = function () {
-		return ggd3.util.countObjKeys(this.datasets);
+		return ggjs.util.countObjKeys(this.datasets);
 	};
 
 	prototype.names = function () {
-		return ggd3.util.objKeys(this.datasets);
+		return ggjs.util.objKeys(this.datasets);
 	};
 
 	return datasets;
 })();
 
-ggd3.datasets = function (s) {
-  return new ggd3.Data(s);
+ggjs.datasets = function (s) {
+  return new ggjs.Data(s);
 };
 
 
@@ -214,15 +214,15 @@ ggd3.datasets = function (s) {
 // Axes
 // ------------------
 
-ggd3.Axis = (function() {
+ggjs.Axis = (function() {
 	var axis = function(spec) {
 		spec = spec || {};
-		if (ggd3.util.isUndefined(spec.type)) throw "The axis type must be defined";
+		if (ggjs.util.isUndefined(spec.type)) throw "The axis type must be defined";
 		this.axis = {
 			type: spec.type,
 			scale: spec.scale || null
 		};
-		//if (s) ggd3.extend(this.axis, s);
+		//if (s) ggjs.extend(this.axis, s);
 	};
 
 	var prototype = axis.prototype;
@@ -235,7 +235,7 @@ ggd3.Axis = (function() {
 
 	prototype.scale = function(val) {
 		if (!arguments.length) return this.axis.scale;
-		// ToDo: set as object, ggd3 scale (or either)?
+		// ToDo: set as object, ggjs scale (or either)?
 		this.axis.scale = val;
 		return this;
 	};
@@ -243,17 +243,17 @@ ggd3.Axis = (function() {
 	return axis;
 })();
 
-ggd3.axis = function(s) {
-  return new ggd3.Axis(s);
+ggjs.axis = function(s) {
+  return new ggjs.Axis(s);
 };
 
-ggd3.Axes = (function() {
+ggjs.Axes = (function() {
 	var axes = function(s) {
 		var i, axis;
 		this.axes = {};
 		if (s) {
 			for (i = 0; i < s.length; i++) {
-				axis = ggd3.axis(s[i]);
+				axis = ggjs.axis(s[i]);
 				this.axes[axis.type()] = axis;
 			}
 		}
@@ -265,12 +265,12 @@ ggd3.Axes = (function() {
 		// ToDo: Get or set axis
 		if (arguments.length < 1) throw "axis function needs axisType argument.";
 		if (arguments.length == 1) return this.axes[axisType];
-		this.axes[axisType] = ggd3.axis(axis);
+		this.axes[axisType] = ggjs.axis(axis);
 		return this;
 	};
 
 	prototype.count = function() {
-		return ggd3.util.countObjKeys(this.axes);
+		return ggjs.util.countObjKeys(this.axes);
 		// var size = 0, key;
 	 //    for (key in this.axes) {
 	 //        if (this.axes.hasOwnProperty(key)) size++;
@@ -281,8 +281,8 @@ ggd3.Axes = (function() {
 	return axes;
 })();
 
-ggd3.axes = function(s) {
-  return new ggd3.Axes(s);
+ggjs.axes = function(s) {
+  return new ggjs.Axes(s);
 };
 
 
@@ -290,7 +290,7 @@ ggd3.axes = function(s) {
 // Scales
 // ------------------
 
-ggd3.Scale = (function () {
+ggjs.Scale = (function () {
 	var scale = function(spec) {
 		this.scale = {
 			type: spec.type || null,
@@ -298,7 +298,7 @@ ggd3.Scale = (function () {
 			domain: spec.domain || null,
 			range: spec.range || null
 		};
-		//if (spec) ggd3.extend(this.scale, spec);
+		//if (spec) ggjs.extend(this.scale, spec);
 	};
 
 	var prototype = scale.prototype;
@@ -341,33 +341,33 @@ ggd3.Scale = (function () {
 
 	prototype.isQuantitative = function () {
 		var quantScales = ["linear", "sqrt", "pow", "log"];
-		return ggd3.util.array.contains(quantScales, this.type());
+		return ggjs.util.array.contains(quantScales, this.type());
 	}
 
 	prototype.isOrdinal = function () {
 		var ordinalScales = ["ordinal", "category10", "category20", "category20b", "category20c"];
-		return ggd3.util.array.contains(ordinalScales, this.type());
+		return ggjs.util.array.contains(ordinalScales, this.type());
 	}
 
 	prototype.isTime = function () {
 		var timeScales = ["time"];
-		return ggd3.util.array.contains(timeScales, this.type());
+		return ggjs.util.array.contains(timeScales, this.type());
 	}
 
 	return scale;
 })();
 
-ggd3.scale = function(s) {
-	return new ggd3.Scale(s);
+ggjs.scale = function(s) {
+	return new ggjs.Scale(s);
 };
 
-ggd3.Scales = (function() {
+ggjs.Scales = (function() {
 	var scales = function(s) {
 		var i, scale;
 		this.scales = {};
 		if (s) {
 			for (i = 0; i < s.length; i++) {
-				scale = ggd3.scale(s[i]);
+				scale = ggjs.scale(s[i]);
 				this.scales[scale.name()] = scale;
 			}
 		}
@@ -379,7 +379,7 @@ ggd3.Scales = (function() {
 		// Gets or set scale by name
 		if (arguments.length < 1) throw "scale function needs scaleName argument.";
 		if (arguments.length == 1) return this.scales[scaleName];
-		this.scales[scaleName] = ggd3.scale(scale);
+		this.scales[scaleName] = ggjs.scale(scale);
 		return this;
 	};
 
@@ -394,8 +394,8 @@ ggd3.Scales = (function() {
 	return scales;
 })();
 
-ggd3.scales = function(s) {
-  return new ggd3.Scales(s);
+ggjs.scales = function(s) {
+  return new ggjs.Scales(s);
 };
 
 
@@ -403,7 +403,7 @@ ggd3.scales = function(s) {
 // Padding
 // ------------------
 
-ggd3.Padding = (function () {
+ggjs.Padding = (function () {
 	var padding = function(s) {
 		this.padding = {
 			left: s.left || 20,
@@ -411,7 +411,7 @@ ggd3.Padding = (function () {
 			top: s.top || 20,
 			bottom: s.bottom || 20
 		};
-		//if (s) ggd3.extend(this.padding, s);
+		//if (s) ggjs.extend(this.padding, s);
 	};
 
 	var prototype = padding.prototype;
@@ -443,8 +443,8 @@ ggd3.Padding = (function () {
 	return padding;
 })();
 
-ggd3.padding = function(s) {
-	return new ggd3.Padding(s);
+ggjs.padding = function(s) {
+	return new ggjs.Padding(s);
 };
 
 
@@ -453,7 +453,7 @@ ggd3.padding = function(s) {
 // Aesthetic mappings
 // ------------------
 
-ggd3.AesMapping = (function () {
+ggjs.AesMapping = (function () {
 	// Aesthetic mapping shows which variables are mapped to which
 	// aesthetics. For example, we might map weight to x position, 
 	// height to y position, and age to size. 
@@ -467,7 +467,7 @@ ggd3.AesMapping = (function () {
 			field: s.field || null,
 			scale: s.scale || null
 		};
-		//if (s) ggd3.extend(this.aesmap, s);
+		//if (s) ggjs.extend(this.aesmap, s);
 	};
 
 	var prototype = aesmap.prototype;
@@ -493,16 +493,16 @@ ggd3.AesMapping = (function () {
 	return aesmap;
 })();
 
-ggd3.aesmapping = function(s) {
-  return new ggd3.AesMapping(s);
+ggjs.aesmapping = function(s) {
+  return new ggjs.AesMapping(s);
 };
 
-ggd3.AesMappings = (function () {
+ggjs.AesMappings = (function () {
 	var aesmappings = function(spec) {
 		var i;
 		this.aesmappings = [];
 		for (i = 0; i < spec.length; i++) {
-			this.aesmappings.push(ggd3.aesmapping(spec[i]));
+			this.aesmappings.push(ggjs.aesmapping(spec[i]));
 		}
 	};
 
@@ -532,8 +532,8 @@ ggd3.AesMappings = (function () {
 	return aesmappings;
 })();
 
-ggd3.aesmappings = function(s) {
-  return new ggd3.AesMappings(s);
+ggjs.aesmappings = function(s) {
+  return new ggjs.AesMappings(s);
 };
 
 
@@ -541,7 +541,7 @@ ggd3.aesmappings = function(s) {
 // Layers
 // ------------------
 
-ggd3.Layer = (function () {
+ggjs.Layer = (function () {
 	// Layers are responsible for creating the objects that we perceive on the plot. 
 	// A layer is composed of:
 	//  - data and aesthetic mapping,
@@ -559,9 +559,9 @@ ggd3.Layer = (function () {
 			data: spec.data || null,
 			geom: spec.geom || null,
 			position: spec.position || null,
-			aesmappings: ggd3.aesmappings(spec.aesmappings || [])
+			aesmappings: ggjs.aesmappings(spec.aesmappings || [])
 		};
-		//if (s) ggd3.extend(this.layer, s);
+		//if (s) ggjs.extend(this.layer, s);
 
 		fillAesMap = this.layer.aesmappings.findByAes("fill");
 		xAesMap = this.layer.aesmappings.findByAes("x");
@@ -620,16 +620,16 @@ ggd3.Layer = (function () {
 	return layer;
 })();
 
-ggd3.layer = function(s) {
-  return new ggd3.Layer(s);
+ggjs.layer = function(s) {
+  return new ggjs.Layer(s);
 };
 
-ggd3.Layers = (function () {
+ggjs.Layers = (function () {
 	var layers = function(spec) {
 		var i;
 		this.layers = [];
 		for (i = 0; i < spec.length; i++) {
-			this.layers.push(ggd3.layer(spec[i]));
+			this.layers.push(ggjs.layer(spec[i]));
 		}
 	};
 
@@ -646,8 +646,8 @@ ggd3.Layers = (function () {
 	return layers;
 })();
 
-ggd3.layers = function(s) {
-  return new ggd3.Layers(s);
+ggjs.layers = function(s) {
+  return new ggjs.Layers(s);
 };
 
 
@@ -655,7 +655,7 @@ ggd3.layers = function(s) {
 // Plot
 // ------------------
 
-ggd3.Plot = (function () {
+ggjs.Plot = (function () {
 	// The layered grammar defines the components of a plot as:
 	//  - a default dataset and set of mappings from variables to aesthetics,
 	//  - one or more layers, with each layer having one geometric object, one statistical 
@@ -671,17 +671,17 @@ ggd3.Plot = (function () {
 			selector: spec.selector,
 			width: spec.width || 500,
 			height: spec.height || 500,
-			padding: ggd3.padding(spec.padding || {}),
-			data: ggd3.datasets(spec.data || []),
+			padding: ggjs.padding(spec.padding || {}),
+			data: ggjs.datasets(spec.data || []),
 			defaultDatasetName: null,
 			// ToDo: automatically find co-ordinate system based on layers?
 			coord: spec.coord || "cartesian",
-			scales: ggd3.scales(spec.scales|| []),
-			axes: ggd3.axes(spec.axes || []),
+			scales: ggjs.scales(spec.scales|| []),
+			axes: ggjs.axes(spec.axes || []),
 			facet: spec.facet || null,
-			layers: ggd3.layers(spec.layers || [])
+			layers: ggjs.layers(spec.layers || [])
 		};
-		//if (spec) ggd3.extend(this.plot, spec);
+		//if (spec) ggjs.extend(this.plot, spec);
 	};
 
 	var prototype = plot.prototype;
@@ -706,7 +706,7 @@ ggd3.Plot = (function () {
 
 	prototype.padding = function (val) {
 		if (!arguments.length) return this.plot.padding;
-		this.plot.padding = ggd3.padding(val);
+		this.plot.padding = ggjs.padding(val);
 		return this;
 	};
 
@@ -805,11 +805,11 @@ ggd3.Plot = (function () {
 	return plot;
 })();
 
-ggd3.plot = function(p) {
-  return new ggd3.Plot(p);
+ggjs.plot = function(p) {
+  return new ggjs.Plot(p);
 };
 
-ggd3.Renderer = (function (d3) {
+ggjs.Renderer = (function (d3) {
 	var renderer = function(plotDef) {
 		this.renderer = {
 			plotDef: plotDef,
@@ -975,10 +975,10 @@ ggd3.Renderer = (function (d3) {
 			values = dataset.values(),
 			points;
 
-		points = plotArea.selectAll(".ggd3-point")
+		points = plotArea.selectAll(".ggjs-point")
 				.data(values)
 			.enter().append("circle")
-				.attr("class", "ggd3-point")
+				.attr("class", "ggjs-point")
 				.attr("r", 3.5)
 				.attr("cx", function (d) { return xScale(d[xField]); })
 				.attr("cy", function (d) { return yScale(d[yField]); });
@@ -1013,10 +1013,10 @@ ggd3.Renderer = (function (d3) {
 			this.warning("No text field supplied for text layer, label will be blank.");
 		}
 
-		points = plotArea.selectAll("text.ggd3-label")
+		points = plotArea.selectAll("text.ggjs-label")
 				.data(values)
 			.enter().append("text")
-				.attr("class", "ggd3-label")
+				.attr("class", "ggjs-label")
 				.attr("x", function (d) { return xScale(d[xField]); })
 				.attr("y", function (d) { return yScale(d[yField]); })
 				.text(function (d) { 
@@ -1056,7 +1056,7 @@ ggd3.Renderer = (function (d3) {
 			}
 
 			if (this.xAxisScaleDef().isOrdinal() && fillScaleDef.isOrdinal()) {
-				values = ggd3.dataHelper.generateStackYValues(values, xField, fillAesMap.field(), yField);
+				values = ggjs.dataHelper.generateStackYValues(values, xField, fillAesMap.field(), yField);
 			} else {
 				throw "Do not know how to draw stacked/dodged bars with non ordinal scales."
 			}
@@ -1078,10 +1078,10 @@ ggd3.Renderer = (function (d3) {
 	};
 
 	prototype.drawCartesianBars = function (plotArea, values, xField, yField, xScale, yScale, yAxisHeight, isStacked) {
-		var bars = plotArea.selectAll("rect.ggd3-bar")
+		var bars = plotArea.selectAll("rect.ggjs-bar")
 				.data(values)
 			.enter().append("rect")
-				.attr("class", "ggd3-bar")
+				.attr("class", "ggjs-bar")
 				.attr("x", function(d) { return xScale(d[xField]); })
 				.attr("y", function(d) { 
 					if (isStacked) {
@@ -1105,10 +1105,10 @@ ggd3.Renderer = (function (d3) {
 	        .startAngle(function (d) { console.log("startAngle d: " + d[xField]); console.log("startAngle: " + xScale(d[xField])); return xScale(d[xField]); })
 	        .endAngle(function (d) { console.log("endAngle d: " + d[xField]); console.log("endAngle: " + xScale(d[xField]) + xScale.rangeBand()); return xScale(d[xField]) + xScale.rangeBand(); });
 
-		bars = plotArea.selectAll("path.ggd3-arc")
+		bars = plotArea.selectAll("path.ggjs-arc")
 				.data(values)
 			.enter().append("path")
-				.attr("class", "ggd3-arc")
+				.attr("class", "ggjs-arc")
 				.attr("d", arc)
 		return bars;
 	};
@@ -1151,12 +1151,12 @@ ggd3.Renderer = (function (d3) {
 					yAxis = this.yAxis(),
 					xAxisY = plotDef.plotAreaY() + plotDef.plotAreaHeight();
 				plot.append("g")
-					.attr("class", "ggd3-x ggd3-axis")
+					.attr("class", "ggjs-x ggjs-axis")
 					.attr("transform", "translate(" + plotDef.plotAreaX() + "," + xAxisY + ")")
 					.call(xAxis);
 				// ToDo: append x axis title
 				plot.append("g")
-					.attr("class", "ggd3-y ggd3-axis")
+					.attr("class", "ggjs-y ggjs-axis")
 					.attr("transform", "translate(" + plotDef.plotAreaX() + "," + plotDef.plotAreaY() + ")")
 					.call(yAxis);
 				// ToDo: append x axis title
@@ -1226,7 +1226,7 @@ ggd3.Renderer = (function (d3) {
 					tmpStat = this.layerStackedDataMax(layer, dataset, aes);
 				} else {
 					// Normal case for finding aes value
-					tmpStat = ggd3.dataHelper.datatableStat(dataset.values(), field, stat);
+					tmpStat = ggjs.dataHelper.datatableStat(dataset.values(), field, stat);
 				}
 				if (!isNaN(tmpStat)) {
 					if (statVal == null) statVal = tmpStat;
@@ -1259,7 +1259,7 @@ ggd3.Renderer = (function (d3) {
 
 		if (aes === "y") {
 			// ToDo: is the fill aes the only way to specify stacked figures?
-			tmpStat = ggd3.dataHelper.maxStackValue(dataset.values(), 
+			tmpStat = ggjs.dataHelper.maxStackValue(dataset.values(), 
 				xAes.field(), fillAes.field(), valueAes.field());
 		} else {
 			throw "Don't know how to find stacked value for value aes " + aes;
@@ -1417,9 +1417,9 @@ ggd3.Renderer = (function (d3) {
 	};
 
 	prototype.scale = function (scaleDef) {
-		// Produces D3 scale from ggd3 scale definition
+		// Produces D3 scale from ggjs scale definition
 		var scale = null;
-		scaleDef = scaleDef || ggd3.scale({});
+		scaleDef = scaleDef || ggjs.scale({});
 		switch (scaleDef.type()) {
 			case "linear":
 				scale = d3.scale.linear();
@@ -1450,15 +1450,15 @@ ggd3.Renderer = (function (d3) {
 	return renderer;
 })(d3);
 
-ggd3.renderer = function(s) {
-  return new ggd3.Renderer(s);
+ggjs.renderer = function(s) {
+  return new ggjs.Renderer(s);
 };
 
 // ------------------
 // Data Helper
 // ------------------
 
-ggd3.dataHelper = (function (d3) {
+ggjs.dataHelper = (function (d3) {
 	var datatableMin = function (datatable, field) {
 			// Finds the min value of the field in the datatable
 			return d3.min(datatable, function (d) { return d[field]; });
@@ -1514,7 +1514,7 @@ ggd3.dataHelper = (function (d3) {
 			// the stacked items of the group.
 			// Useful for stacked bar charts where an extra y value is
 			// needed to know where the last bar in the group was placed.
-			var dataCopy = ggd3.util.deepCopy(data),
+			var dataCopy = ggjs.util.deepCopy(data),
 				nested = d3.nest()
 					.key(function (d) { return d[groupField]; })
 					.key(function (d) { return d[stackField]; })
@@ -1571,14 +1571,14 @@ ggd3.dataHelper = (function (d3) {
 	}
 })(d3);
 
-ggd3.ggd3 = (function () {
+ggjs.ggjs = (function () {
 	// Init
 	var render = function (spec) {
 		// Load spec
-		var plotDef = ggd3.plot(spec);
+		var plotDef = ggjs.plot(spec);
 
 		// Render chart
-		ggd3.renderer(plotDef).render();
+		ggjs.renderer(plotDef).render();
 	};
 
 	return {

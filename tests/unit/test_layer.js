@@ -1,18 +1,18 @@
-describe("Module: ggd3.Layer", function() {
+describe("Module: ggjs.Layer", function() {
 	
 	describe("layer initialisation", function() {
 		it("should initialise the layer with data", function() {
-			var layer = ggd3.layer( {data: "myDataset"} );
+			var layer = ggjs.layer( {data: "myDataset"} );
 			expect(layer.data()).toEqual("myDataset");
 		});
 
 		it("should initialise the layer with geom", function() {
-			var layer = ggd3.layer( {geom: "text"} );
+			var layer = ggjs.layer( {geom: "text"} );
 			expect(layer.geom()).toEqual("text");
 		});
 
 		it("should initialise the layer with aesthetic mappings", function() {
-			var layer = ggd3.layer({
+			var layer = ggjs.layer({
 				aesmappings: [
 					{
 						aes: "x",
@@ -30,14 +30,14 @@ describe("Module: ggd3.Layer", function() {
 		});
 
 		it("should initialise the layer with position", function() {
-			var layer = ggd3.layer( {geom: "text", position: "dodge"} );
+			var layer = ggjs.layer( {geom: "text", position: "dodge"} );
 			expect(layer.position()).toEqual("dodge");
 		});
 	});
 
 	describe("layer info", function() {
 		it("should identify stacked bar as needing stacked data", function() {
-			var layer = ggd3.layer({
+			var layer = ggjs.layer({
 				geom: "bar",
 				position: "stack",
 				aesmappings: [

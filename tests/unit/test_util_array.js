@@ -1,5 +1,5 @@
-describe("Module: ggd3.util.array", function() {
-	var arrayUtil = ggd3.util.array;
+describe("Module: ggjs.util.array", function() {
+	var arrayUtil = ggjs.util.array;
 
 	describe("indexOf", function() {
 		it("should find string in array", function() {

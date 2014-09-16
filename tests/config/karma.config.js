@@ -15,7 +15,7 @@ module.exports = function(config) {
     // list of files / patterns to load in the browser
     files: [
         'lib/d3.js',
-        'ggd3-0.0.1.js',
+        'ggjs-0.0.1.js',
         'tests/unit/*.js'
     ],
 

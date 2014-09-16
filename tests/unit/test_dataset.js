@@ -1,20 +1,20 @@
-describe("Module: ggd3.Dataset", function() {
+describe("Module: ggjs.Dataset", function() {
 	
 	// ---------------
 	// Initialisation
 	// ---------------
 	describe("dataset initialisation", function() {
 		it("should initialise the dataset with name", function() {
-			var dataset = ggd3.dataset( {name: "x1"} );
+			var dataset = ggjs.dataset( {name: "x1"} );
 			expect(dataset.name()).toEqual("x1");
 		});
 
 		it("should error if no dataset name", function() {
-			expect(function () { ggd3.dataset({}); }).toThrow(new Error("The dataset name must be defined"));
+			expect(function () { ggjs.dataset({}); }).toThrow(new Error("The dataset name must be defined"));
 		});
 
 		it("should initialise the dataset with values", function() {
-			var dataset = ggd3.dataset({
+			var dataset = ggjs.dataset({
 				name: "x1", 
 				values: [
 					{"x": 1, "y": 100}, 
@@ -26,17 +26,17 @@ describe("Module: ggd3.Dataset", function() {
 		});
 
 		it("should initialise the dataset with url", function() {
-			var dataset = ggd3.dataset( {name: "x1", url: "http://example.com"} );
+			var dataset = ggjs.dataset( {name: "x1", url: "http://example.com"} );
 			expect(dataset.url()).toEqual("http://example.com");
 		});
 
 		it("should initialise the dataset with content type", function() {
-			var dataset = ggd3.dataset( {name: "x1", contentType: "text/tab-separated-values"} );
+			var dataset = ggjs.dataset( {name: "x1", contentType: "text/tab-separated-values"} );
 			expect(dataset.contentType()).toEqual("text/tab-separated-values");
 		});
 
 		it("should initialise the dataset with column data types", function() {
-			var dataset = ggd3.dataset( {name: "x1", dataTypes: {"columnA": "number", "columnB": "boolean"}} );
+			var dataset = ggjs.dataset( {name: "x1", dataTypes: {"columnA": "number", "columnB": "boolean"}} );
 			expect(dataset.dataTypes()["columnA"]).toEqual("number");
 			expect(dataset.dataTypes()["columnB"]).toEqual("boolean");
 		});
@@ -47,7 +47,7 @@ describe("Module: ggd3.Dataset", function() {
 	// ---------------
 	describe("dataset values", function() {
 		it("should set the dataset values", function() {
-			var dataset = ggd3.dataset( {name: "x1"} );
+			var dataset = ggjs.dataset( {name: "x1"} );
 			dataset.values([
 				{"x": 1, "y": 100}, 
 				{"x": 2, "y": 200}
@@ -64,7 +64,7 @@ describe("Module: ggd3.Dataset", function() {
 	// ---------------
 	describe("dataset data types", function() {
 		it("should apply data type coercion to dataset values", function() {
-			var dataset = ggd3.dataset({
+			var dataset = ggjs.dataset({
 				name: "x1", 
 				dataTypes: {"y": "number", "isAThing": "boolean"},
 				values: [

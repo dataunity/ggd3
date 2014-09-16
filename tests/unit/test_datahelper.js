@@ -1,4 +1,4 @@
-describe("Module: ggd3.dataHelper", function() {
+describe("Module: ggjs.dataHelper", function() {
 	var datatable1 = [
 			{ "x": 1, "y": 10},
 			{ "x": 2, "y": 11},
@@ -20,7 +20,7 @@ describe("Module: ggd3.dataHelper", function() {
 		],
 		goodDatatables = [datatable1, datatable2],
 		allDatatables = [datatable1, datatable2, datatableBad, datatableMissingVals],
-		dataHelper = ggd3.dataHelper;
+		dataHelper = ggjs.dataHelper;
 	
 	describe("datatable stats - max and min", function() {
 		
@@ -85,7 +85,7 @@ describe("Module: ggd3.dataHelper", function() {
 	});
 
 	describe("stacked data", function() {
-		var dataHelper = ggd3.dataHelper;
+		var dataHelper = ggjs.dataHelper;
 
 		it("should create y baseline field for categorical stacked data", function() {
 			var stackedDatatable = [
@@ -113,7 +113,7 @@ describe("Module: ggd3.dataHelper", function() {
 	});
 
 	describe("stacked data aggregation", function() {
-		var dataHelper = ggd3.dataHelper;
+		var dataHelper = ggjs.dataHelper;
 
 		it("should find max value within stacked data", function() {
 			var stackedDatatable = [

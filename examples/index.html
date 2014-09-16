@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>GGD3</title>
-        <link href="../css/theme/default/ggd3-0.0.1.css" rel="stylesheet" />
+        <title>GGJS</title>
+        <link href="../css/theme/default/ggjs-0.0.1.css" rel="stylesheet" />
 
-        <!-- ToDo: remove this dependency or package into ggd3 (see ggd3.renderer.render() method) -->
+        <!-- ToDo: remove this dependency or package into ggjs (see ggjs.renderer.render() method) -->
         <script src="http://d3js.org/queue.v1.min.js"></script>
 
         <script src="../lib/d3.js" charset="utf-8"></script>
-        <script src="../ggd3-0.0.1.js" charset="utf-8"></script>
+        <script src="../ggjs-0.0.1.js" charset="utf-8"></script>
 
-        <!-- JQuery: only used to help with this page, not needed for ggd3 -->
+        <!-- JQuery: only used to help with this page, not needed for ggjs -->
         <script src="lib/jquery-1.11.1.js" charset="utf-8"></script>
     </head>
     <body>
@@ -203,8 +203,8 @@
                 } else {
                     $("#feedback").text("");
                 }
-                plotDef = ggd3.plot(spec);
-                renderer = ggd3.renderer(plotDef);
+                plotDef = ggjs.plot(spec);
+                renderer = ggjs.renderer(plotDef);
                 renderer.render();
                 // ToDo: warnings wont work as rendering is async
                 // if (renderer.warnings() && renderer.warnings().length > 0) {
@@ -223,7 +223,7 @@
             });
 
             drawChart("bar");
-            //ggd3.ggd3.render(chartSpec("bar"));
+            //ggjs.ggjs.render(chartSpec("bar"));
 
         </script>
     </body>

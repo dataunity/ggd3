@@ -1,14 +1,14 @@
-describe("Module: ggd3.Layers", function() {
+describe("Module: ggjs.Layers", function() {
 	
 	describe("layers", function() {
 
 		it("should initialise layers", function() {
-			var layers = ggd3.layers( [{geom: "text"}] );
+			var layers = ggjs.layers( [{geom: "text"}] );
 			expect(layers.count()).toEqual(1);
 		});
 
 		it("should initialise layers with two layers", function() {
-			var layers = ggd3.layers([
+			var layers = ggjs.layers([
 				{geom: "text"},
 				{geom: "area"}
 			]);
@@ -16,7 +16,7 @@ describe("Module: ggd3.Layers", function() {
 		});
 
 		it("should get layers as array", function() {
-			var layers = ggd3.layers([
+			var layers = ggjs.layers([
 				{geom: "text"},
 				{geom: "area"}
 			]);

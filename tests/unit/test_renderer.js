@@ -1,4 +1,4 @@
-describe("Module: ggd3.Renderer", function() {
+describe("Module: ggjs.Renderer", function() {
 	var specOneDatasetNoLayers = {
 	        "selector": "#chart",
 	        "coord": "cartesian",
@@ -80,14 +80,14 @@ describe("Module: ggd3.Renderer", function() {
 	
 	describe("renderer data", function() {
 		it("should find min x value across layers", function() {
-			var plotDef = ggd3.plot(specMultiLayerDatasets),
-				renderer = ggd3.renderer(plotDef);
+			var plotDef = ggjs.plot(specMultiLayerDatasets),
+				renderer = ggjs.renderer(plotDef);
 			expect(renderer.statAcrossLayers("x", "min")).toEqual(0.5);
 		});
 
 		it("should find max x value across layers", function() {
-			var plotDef = ggd3.plot(specMultiLayerDatasets),
-				renderer = ggd3.renderer(plotDef);
+			var plotDef = ggjs.plot(specMultiLayerDatasets),
+				renderer = ggjs.renderer(plotDef);
 			expect(renderer.statAcrossLayers("x", "max")).toEqual(12.5);
 		});
 
@@ -105,8 +105,8 @@ describe("Module: ggd3.Renderer", function() {
 	                "geom": "point"
 	            }
 	        ];
-	        plotDef = ggd3.plot(spec);
-	        renderer = ggd3.renderer(plotDef);
+	        plotDef = ggjs.plot(spec);
+	        renderer = ggjs.renderer(plotDef);
 			expect(renderer.statAcrossLayers("x", "max")).toEqual(2.5);
 		});
 
@@ -161,8 +161,8 @@ describe("Module: ggd3.Renderer", function() {
 			    },
 			    plotDef, renderer, vals;
 
-	        plotDef = ggd3.plot(spec);
-	        renderer = ggd3.renderer(plotDef);
+	        plotDef = ggjs.plot(spec);
+	        renderer = ggjs.renderer(plotDef);
 	        vals = renderer.allValuesAcrossLayers("x");
 			expect(vals.sort()).toEqual(["a", "a", "a", "b", "c", "d"]);
 		});
@@ -224,8 +224,8 @@ describe("Module: ggd3.Renderer", function() {
 			    },
 			    plotDef, renderer, val;
 
-	        plotDef = ggd3.plot(spec);
-	        renderer = ggd3.renderer(plotDef);
+	        plotDef = ggjs.plot(spec);
+	        renderer = ggjs.renderer(plotDef);
 	        
 	        // Should sum up the values in the second layer to get
 	        // max as it's a stacked data layer
@@ -253,8 +253,8 @@ describe("Module: ggd3.Renderer", function() {
 			            {"name": "y"}
 			        ]
 			    },
-	    		plotDef = ggd3.plot(spec),
-				renderer = ggd3.renderer(plotDef);
+	    		plotDef = ggjs.plot(spec),
+				renderer = ggjs.renderer(plotDef);
 			expect(renderer.scaleDef("x").name()).toEqual("x");
 		});
 	});
