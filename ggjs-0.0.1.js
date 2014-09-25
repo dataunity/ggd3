@@ -126,12 +126,10 @@ ggjs.Dataset = (function() {
 		return this;
 	};
 
-	prototype.applyDataTypes = function () {
+	prototype.applyDataTypesToValues = function (dataTypes, values) {
 		// Applies the user supplied data types
 		// to values in dataset
-		var dataTypes = this.dataTypes(),
-			values = this.values(),
-			isUndefined = ggjs.util.isUndefined,
+		var isUndefined = ggjs.util.isUndefined,
 			toBoolean = ggjs.util.toBoolean,
 			fieldName, dataType, i, val;
 
@@ -162,7 +160,13 @@ ggjs.Dataset = (function() {
 					throw "Can't apply data type, unrecognised data type " + dataType;
 			}
 		}
-	}
+	};
+
+	prototype.applyDataTypes = function () {
+		var dataTypes = this.dataTypes(),
+			values = this.values();
+		this.applyDataTypesToValues(dataTypes, values);
+	};
 
 	return dataset;
 })();
