@@ -20,8 +20,8 @@ describe("Module: ggjs.Renderer", function() {
 	            {"name": "y", "domain": [0, 3]}
 	        ],
 	        "axes": [
-	            {"type": "x", "scale": "x"},
-	            {"type": "y", "scale": "y"}
+	            {"type": "x", "scaleName": "x"},
+	            {"type": "y", "scaleName": "y"}
 	        ]
 	    },
 	    specMultiLayerDatasets = {
@@ -53,8 +53,8 @@ describe("Module: ggjs.Renderer", function() {
 	            {"name": "y", "domain": [0, 3]}
 	        ],
 	        "axes": [
-	            {"type": "x", "scale": "x"},
-	            {"type": "y", "scale": "y"}
+	            {"type": "x", "scaleName": "x"},
+	            {"type": "y", "scaleName": "y"}
 	        ],
 	        "layers": [
 	            {
@@ -137,8 +137,8 @@ describe("Module: ggjs.Renderer", function() {
 			            {"name": "y", "domain": [0, 3]}
 			        ],
 			        "axes": [
-			            {"type": "x", "scale": "x"},
-			            {"type": "y", "scale": "y"}
+			            {"type": "x", "scaleName": "x"},
+			            {"type": "y", "scaleName": "y"}
 			        ],
 			        "layers": [
 			            {
@@ -197,8 +197,8 @@ describe("Module: ggjs.Renderer", function() {
 			            {"name": "y", "domain": [0, 3]}
 			        ],
 			        "axes": [
-			            {"type": "x", "scale": "x"},
-			            {"type": "y", "scale": "y"}
+			            {"type": "x", "scaleName": "x"},
+			            {"type": "y", "scaleName": "y"}
 			        ],
 			        "layers": [
 			            {

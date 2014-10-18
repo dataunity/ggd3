@@ -224,7 +224,7 @@ ggjs.Axis = (function() {
 		if (ggjs.util.isUndefined(spec.type)) throw "The axis type must be defined";
 		this.axis = {
 			type: spec.type,
-			scale: spec.scale || null
+			scaleName: spec.scaleName || null
 		};
 		//if (s) ggjs.extend(this.axis, s);
 	};
@@ -237,10 +237,10 @@ ggjs.Axis = (function() {
 		return this;
 	};
 
-	prototype.scale = function(val) {
-		if (!arguments.length) return this.axis.scale;
+	prototype.scaleName = function(val) {
+		if (!arguments.length) return this.axis.scaleName;
 		// ToDo: set as object, ggjs scale (or either)?
-		this.axis.scale = val;
+		this.axis.scaleName = val;
 		return this;
 	};
 
@@ -469,7 +469,7 @@ ggjs.AesMapping = (function () {
 		this.aesmap = {
 			aes: s.aes || null,
 			field: s.field || null,
-			scale: s.scale || null
+			scaleName: s.scaleName || null
 		};
 		//if (s) ggjs.extend(this.aesmap, s);
 	};
@@ -488,9 +488,9 @@ ggjs.AesMapping = (function () {
 		return this;
 	};
 
-	prototype.scale = function (val) {
-		if (!arguments.length) return this.aesmap.scale;
-		this.aesmap.scale = val;
+	prototype.scaleName = function (val) {
+		if (!arguments.length) return this.aesmap.scaleName;
+		this.aesmap.scaleName = val;
 		return this;
 	};
 
@@ -563,7 +563,9 @@ ggjs.Layer = (function () {
 			data: spec.data || null,
 			geom: spec.geom || null,
 			position: spec.position || null,
-			aesmappings: ggjs.aesmappings(spec.aesmappings || [])
+			// Note: support 'aesmapping' as name for aesmapping collection as well
+			// as 'aesmapping' to support Linked Data style naming
+			aesmappings: ggjs.aesmappings(spec.aesmappings || spec.aesmapping || [])
 		};
 		//if (s) ggjs.extend(this.layer, s);
 
@@ -680,10 +682,16 @@ ggjs.Plot = (function () {
 			defaultDatasetName: null,
 			// ToDo: automatically find co-ordinate system based on layers?
 			coord: spec.coord || "cartesian",
-			scales: ggjs.scales(spec.scales|| []),
-			axes: ggjs.axes(spec.axes || []),
+			// Note: support 'scale' as name for scale collection as well
+			// as 'scales' to support Linked Data style naming
+			scales: ggjs.scales(spec.scales || spec.scale || []),
+			// Note: support 'axis' as name for axis collection as well
+			// as 'axes' to support Linked Data style naming
+			axes: ggjs.axes(spec.axes || spec.axis || []),
 			facet: spec.facet || null,
-			layers: ggjs.layers(spec.layers || [])
+			// Note: support 'layer' as name for layers collection as well
+			// as 'layers' to support Linked Data style naming
+			layers: ggjs.layers(spec.layers || spec.layer || [])
 		};
 		//if (spec) ggjs.extend(this.plot, spec);
 	};
@@ -1049,17 +1057,32 @@ ggjs.Renderer = (function (d3) {
 			yScale = this.yAxis().scale(),
 			datasetName = layerDef.data(),
 			dataset = plotDef.data().dataset(datasetName),
-			values = dataset.values(),
 			isStacked = layerDef.useStackedData(),
-			bars;
+			bars, values;
+
+		if (dataset == null) {
+			// Use default dataset for the plot
+			var datasetNames = plotDef.data().names();
+			if (datasetNames.length !== 1) {
+				throw "Expected one DataSet in the Plot to use as the default DataSet";
+			}
+			datasetName = datasetNames[0];
+			dataset = plotDef.data().dataset(datasetName);
+
+			if (dataset == null) {
+				throw "Couldn't find a layer DataSet or a default DataSet.";
+			}
+		}
+
+		values = dataset.values();
 
 		// Stacked/dodged bar charts
 		// ToDo: dodge bar charts
 		if (isStacked) {
 			// Work out new baseline for each x value
-			var fillScaleDef = this.scaleDef(fillAesMap.scale());
+			var fillScaleDef = this.scaleDef(fillAesMap.scaleName());
 			if (fillScaleDef == null) {
-				throw "No scale could be found for fill scale " + fillAesMap.scale();
+				throw "No scale could be found for fill scale " + fillAesMap.scaleName();
 			}
 
 			if (this.xAxisScaleDef().isOrdinal() && fillScaleDef.isOrdinal()) {
@@ -1134,7 +1157,7 @@ ggjs.Renderer = (function (d3) {
 			fillAesMap = aesmappings.findByAes("fill");
 		if (fillAesMap != null) {
 			var colorField = fillAesMap.field(),
-				colorScaleDef = this.scaleDef(fillAesMap.scale()),
+				colorScaleDef = this.scaleDef(fillAesMap.scaleName()),
 				colorScale;
 			if (colorScaleDef == null) {
 				this.warning("Couldn't set colour on layer - no valid colour scale.")
@@ -1348,7 +1371,7 @@ ggjs.Renderer = (function (d3) {
 			axis = d3.svg.axis()
 				.orient("bottom"),
 			axisDef = this.plotDef().axes().axis("x") || {},
-			scaleRef = axisDef.scale(),
+			scaleRef = axisDef.scaleName(),
 			scaleDef = plotDef.scales().scale(scaleRef),
 			scale = this.scale(scaleDef);
 
@@ -1390,7 +1413,7 @@ ggjs.Renderer = (function (d3) {
 			axis = d3.svg.axis()
 				.orient("left"),
 			axisDef = this.plotDef().axes().axis("y") || {},
-			scaleRef = axisDef.scale(),
+			scaleRef = axisDef.scaleName(),
 			scaleDef = plotDef.scales().scale(scaleRef),
 			scale = this.scale(scaleDef);
 

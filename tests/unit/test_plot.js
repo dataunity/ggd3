@@ -74,9 +74,36 @@ describe("Module: ggjs.Plot", function() {
 			expect(plot.axes().axis("x1").type()).toEqual("x1");
 		});
 
+		it("should initialise the plot with a Linked Data axis", function() {
+			// It's easier to represent the axis collection as an array
+			// called axis rather than axes when using Linked Data.
+			var plot = ggjs.plot({
+				axis: [
+					{type: "x1"}
+				]
+			});
+			expect(plot.axes().count()).toEqual(1);
+			expect(plot.axes().axis("x1").type()).toEqual("x1");
+		});
+
 		it("should initialise the plot with a scale", function() {
 			var plot = ggjs.plot({
 				scales: [
+					{
+						name: "myScale",
+						type: "pow"
+					}
+				]
+			});
+			expect(plot.scales().count()).toEqual(1);
+			expect(plot.scales().scale("myScale").type()).toEqual("pow");
+		});
+
+		it("should initialise the plot with a Linked Data scale", function() {
+			// It's easier to represent the scale collection as an array
+			// called 'scale' rather than 'scales' when using Linked Data.
+			var plot = ggjs.plot({
+				scale: [
 					{
 						name: "myScale",
 						type: "pow"

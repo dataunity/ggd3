@@ -9,8 +9,8 @@ describe("Module: ggjs.AesMapping", function() {
 		});
 
 		it("should initialise aesmapping with scale", function() {
-			var aesmapping = ggjs.aesmapping( {aes: "col", field: "myField", scale: "colorScale"} );
-			expect(aesmapping.scale()).toEqual("colorScale");
+			var aesmapping = ggjs.aesmapping( {aes: "col", field: "myField", scaleName: "colorScale"} );
+			expect(aesmapping.scaleName()).toEqual("colorScale");
 		});
 
 	});

@@ -29,6 +29,21 @@ describe("Module: ggjs.Layer", function() {
 			expect(layer.aesmappings().findByAes("y").field()).toEqual("field2");
 		});
 
+		it("should initialise the layer with Linked Data aesthetic mappings", function() {
+			// It's easier to represent the aesmapping collection as an array
+			// called 'aesmapping' rather than 'aesmappings' when using Linked Data.
+			var layer = ggjs.layer({
+				aesmapping: [
+					{
+						aes: "x",
+						field: "field1"
+					}
+				]
+			});
+			expect(layer.aesmappings().count()).toEqual(1);
+			expect(layer.aesmappings().findByAes("x").field()).toEqual("field1");
+		});
+
 		it("should initialise the layer with position", function() {
 			var layer = ggjs.layer( {geom: "text", position: "dodge"} );
 			expect(layer.position()).toEqual("dodge");

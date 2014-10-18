@@ -13,9 +13,9 @@ describe("Module: ggjs.Axis", function() {
 		it("should initialise the axis with scale", function() {
 			var axis = ggjs.axis({
 				type: "x1",
-				scale: "xScale"
+				scaleName: "xScale"
 			});
-			expect(axis.scale()).toEqual("xScale");
+			expect(axis.scaleName()).toEqual("xScale");
 		});
 	});
 });
