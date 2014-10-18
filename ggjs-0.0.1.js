@@ -909,10 +909,13 @@ ggjs.Renderer = (function (d3) {
 
 	prototype.renderPlot = function () {
 		var plotDef = this.plotDef(),
-			plot = d3.select(plotDef.selector())
-				.append("svg")
-					.attr("width", plotDef.width())
-					.attr("height", plotDef.height());
+			plot;
+		
+		d3.select(plotDef.selector()).html("");
+		plot = d3.select(plotDef.selector())
+			.append("svg")
+				.attr("width", plotDef.width())
+				.attr("height", plotDef.height());
 
 		console.log(plotDef.plotAreaX());
 		console.log(plotDef.plotAreaY());
