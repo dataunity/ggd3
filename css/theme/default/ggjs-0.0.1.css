@@ -16,3 +16,10 @@
 .ggjs-label {
 	font: 12px sans-serif;
 }
+
+.ggjs-path-map {
+	fill: none;
+	stroke: red;
+	stroke-linejoin: round;
+	stroke-width: 1.5px;
+}

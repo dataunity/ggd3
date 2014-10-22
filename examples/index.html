@@ -8,6 +8,8 @@
         <script src="http://d3js.org/queue.v1.min.js"></script>
 
         <script src="../lib/d3.js" charset="utf-8"></script>
+        <script src="http://d3js.org/d3.geo.tile.v0.min.js"></script>
+        <script src="http://d3js.org/topojson.v1.min.js"></script>
         <script src="../ggjs-0.0.1.js" charset="utf-8"></script>
 
         <!-- JQuery: only used to help with this page, not needed for ggjs -->
@@ -23,6 +25,7 @@
                 <option value="bar">Bar</option>
                 <option value="stackedbar">Stacked Bar</option>
                 <option value="coxcomb">Coxcomb</option>
+                <option value="map">Map</option>
             </select>
         </div>
         <div id="chart"></div>
@@ -190,6 +193,47 @@
                             ]
                         };
                         break;
+
+                    case "map":
+                        return {
+                            "selector": "#chart",
+                            "coord": "mercator",
+                            "width": 500,
+                            "height": 400,
+                            "padding": {"left":30, "top":10, "bottom":30, "right":10},
+                            "data": [
+                                {
+                                    "name": "data",
+                                    "url": "data/iris-flowers.tsv",
+                                    "contentType": "text/tab-separated-values"
+                                }
+                            ],
+                            "scales": [
+                                {"name": "x", "type": "linear"},
+                                {"name": "y", "type": "linear"},
+                                {"name": "color", "type": "category10"},
+                            ],
+                            "axes": [
+                                {"type": "x", "scaleName": "x"},
+                                {"type": "y", "scaleName": "y"}
+                            ],
+                            "layers": [
+                                {
+                                    "data": null,
+                                    "geom": "geotiles",
+                                    "stat": null,
+                                    "posadj": null
+                                },
+                                {
+                                    "data": null,
+                                    "geom": "path",
+                                    "stat": null,
+                                    "posadj": null
+                                }
+                            ]
+                        };
+                        break;
+
                     default:
                         return null;
                 }
@@ -222,7 +266,7 @@
                 });
             });
 
-            drawChart("bar");
+            drawChart("map");
             //ggjs.ggjs.render(chartSpec("bar"));
 
         </script>

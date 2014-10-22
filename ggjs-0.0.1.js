@@ -54,23 +54,23 @@ ggjs.util = (function () {
 ggjs.util.array = (function () {
 	var indexOf = function(arr, item) {
 			// Finds the index of item in array
-            var index = -1,
-            	i;
-            for(i = 0; i < arr.length; i++) {
-                if(arr[i] === item) {
-                    index = i;
-                    break;
-                }
-            }
-            return index;
-        },
-        contains = function (arr, item) {
-        	return indexOf(arr, item) !== -1;
-        };
-    return {
-    	indexOf: indexOf,
-    	contains: contains
-    }
+			var index = -1,
+				i;
+			for(i = 0; i < arr.length; i++) {
+				if(arr[i] === item) {
+					index = i;
+					break;
+				}
+			}
+			return index;
+		},
+		contains = function (arr, item) {
+			return indexOf(arr, item) !== -1;
+		};
+	return {
+		indexOf: indexOf,
+		contains: contains
+	}
 })();
 
 
@@ -389,10 +389,10 @@ ggjs.Scales = (function() {
 
 	prototype.count = function() {
 		var size = 0, key;
-	    for (key in this.scales) {
-	        if (this.scales.hasOwnProperty(key)) size++;
-	    }
-	    return size;
+		for (key in this.scales) {
+			if (this.scales.hasOwnProperty(key)) size++;
+		}
+		return size;
 	};
 
 	return scales;
@@ -825,11 +825,13 @@ ggjs.Renderer = (function (d3) {
 	var renderer = function(plotDef) {
 		this.renderer = {
 			plotDef: plotDef,
+			plot: null,	// The element to draw to
 			xAxis: null,
 			yAxis: null,
 			datasetsRetrieved: {},
 			warnings: []
 		};
+		this.geo = {};
 	};
 
 	var prototype = renderer.prototype;
@@ -890,6 +892,13 @@ ggjs.Renderer = (function (d3) {
 							callback(null, res);
 						});
 						break;
+					case "application/vnd.geo+json":
+						d3.json(url, function(err, res) {
+							if (err) throw "Error fetching GEO JSON results: " + err.statusText;
+							dataset.values(res);
+							callback(null, res);
+						});
+						break;
 					default:
 						throw "Don't know you to load data of type " + contentType;
 				}
@@ -913,7 +922,45 @@ ggjs.Renderer = (function (d3) {
 				// Data loaded - continue rendering
 				finishedCallback();
 			});
-	}
+	};
+
+	prototype.setupGeo = function () {
+		var this_ = this,
+			plotDef = this.plotDef(),
+			width = plotDef.plotAreaWidth(),
+			height = plotDef.plotAreaHeight();
+
+		if (plotDef.coord() !== "mercator") {
+			return;
+		}
+
+		// var width = Math.max(960, window.innerWidth),
+  //   		height = Math.max(500, window.innerHeight);
+
+		var projection = d3.geo.mercator()
+			.scale((1 << 12) / 2 / Math.PI)
+			.translate([width / 2, height / 2]);
+
+		var center = projection([-100, 40]);
+
+		var zoom = d3.behavior.zoom()
+			.scale(projection.scale() * 2 * Math.PI)
+			.scaleExtent([1 << 11, 1 << 14])
+			.translate([width - center[0], height - center[1]])
+			.on("zoom", this_.drawLayers);
+			//.on("zoom", this_.drawLayers(this_.renderer.plot));
+			//.on("zoom", zoomed);
+
+		this.geo.zoom = zoom;
+
+		// With the center computed, now adjust the projection such that
+		// it uses the zoom behavior’s translate and scale.
+		projection
+			.scale(1 / 2 / Math.PI)
+			.translate([0, 0]);
+
+		this.geo.projection = projection;
+	};
 
 	prototype.renderPlot = function () {
 		var plotDef = this.plotDef(),
@@ -924,6 +971,7 @@ ggjs.Renderer = (function (d3) {
 			.append("svg")
 				.attr("width", plotDef.width())
 				.attr("height", plotDef.height());
+		this.renderer.plot = plot;
 
 		console.log(plotDef.plotAreaX());
 		console.log(plotDef.plotAreaY());
@@ -934,17 +982,20 @@ ggjs.Renderer = (function (d3) {
 		// of data for appropriate aes across layers
 		this.setupXAxis();
 		this.setupYAxis();
+		this.setupGeo();
 
-		this.drawAxes(plot);
-		this.drawLayers(plot);
+		this.drawAxes();
+		this.drawLayers();
 		
 	};
 
-	prototype.drawLayers = function (plot) {
+	prototype.drawLayers = function () {
 		var plotDef = this.plotDef(),
+			plot = this.renderer.plot,
 			layerDefs = plotDef.layers().asArray(),
 			i, layerDef, plotArea;
 
+		// Setup layers
 		switch (plotDef.coord()) {
 			case "cartesian":
 				plotArea = plot.append("g")
@@ -954,10 +1005,13 @@ ggjs.Renderer = (function (d3) {
 				plotArea = plot.append("g")
 					.attr("transform", "translate(" + (plotDef.plotAreaX() + Math.floor(plotDef.plotAreaWidth() / 2)) + "," + (plotDef.plotAreaY() + Math.floor(plotDef.plotAreaHeight() / 2)) + ")");
 				break;
+			case "mercator":
+				//plot.call(this.geo.zoom);
+				plotArea = plot.append("g");
+				break;
 		}
-		//plotArea = plot.append("g")
-		//	.attr("transform", "translate(" + plotDef.plotAreaX() + "," + plotDef.plotAreaY() + ")");
 
+		// Draw each layer
 		for (i = 0; i < layerDefs.length; i++) {
 			layerDef = layerDefs[i];
 
@@ -971,10 +1025,108 @@ ggjs.Renderer = (function (d3) {
 				case "text":
 					this.drawTextLayer(plotArea, layerDef);
 					break;
+				case "path":
+					this.drawPathLayer(plotArea, layerDef);
+					break;
+				case "geotiles":
+					this.drawMapTiles(plotArea, layerDef);
+					break;
 				default:
 					throw "Cannot draw layer, geom type not supported: " + layerDef.geom();
 			}
 		}
+
+		// Post layer processing
+		// switch (plotDef.coord()) {
+		// 	case "mercator":
+		// 		break;
+		// }
+	};
+
+	prototype.drawMapTiles = function (plotArea, layerDef) {
+		// Draws geographic map tiles images onto plot area
+		console.log("Drawing map tiles");
+		var plotDef = this.plotDef(),
+			width = plotDef.plotAreaWidth(),
+			height = plotDef.plotAreaHeight(),
+			zoom = this.geo.zoom,
+			plot = this.renderer.plot;
+
+		//var width = Math.max(960, window.innerWidth),
+    	//	height = Math.max(500, window.innerHeight);
+
+		var tile = d3.geo.tile()
+			.size([width, height]);
+
+		// var svg = d3.select("body").append("svg")
+		// 	.attr("width", width)
+		// 	.attr("height", height);
+		var svg = plot;
+
+		var raster = svg.append("g");
+
+		//function zoomed() {
+			var tiles = tile
+				.scale(zoom.scale())
+				.translate(zoom.translate())
+				();
+
+			var image = raster
+					.attr("transform", "scale(" + tiles.scale + ")translate(" + tiles.translate + ")")
+				.selectAll("image")
+					.data(tiles, function(d) { return d; });
+
+			image.exit()
+				.remove();
+
+			image.enter().append("image")
+				.attr("xlink:href", function(d) { return "http://" + ["a", "b", "c", "d"][Math.random() * 4 | 0] + ".tiles.mapbox.com/v3/examples.map-i86nkdio/" + d[2] + "/" + d[0] + "/" + d[1] + ".png"; })
+				.attr("width", 1)
+				.attr("height", 1)
+				.attr("x", function(d) { return d[0]; })
+				.attr("y", function(d) { return d[1]; });
+		//}
+		//zoomed();
+	};
+
+	prototype.drawPathLayer = function (plotArea, layerDef) {
+		var plotDef = this.plotDef();
+
+		switch (plotDef.coord()) {
+			case "mercator":
+				this.drawMapPathLayer(plotArea, layerDef);
+				break;
+			default:
+				throw "Do not know how to draw path for coord " + plotDef.coord();
+		}
+	}
+
+	prototype.drawMapPathLayer = function (plotArea, layerDef) {
+		// Draws path on a map plot
+		var plotDef = this.plotDef(),
+			// width = plotDef.plotAreaWidth(),
+			// height = plotDef.plotAreaHeight(),
+			zoom = this.geo.zoom,
+			projection = this.geo.projection,
+			plot = this.renderer.plot;
+		console.log("drawing map path");
+		var svg = plot;
+
+		var path = d3.geo.path()
+			.projection(projection);
+
+		var vector = svg.append("path");
+
+		d3.json("data/us.json", function(error, us) {
+			//svg.call(zoom);
+			vector.attr("d", path(topojson.mesh(us, us.objects.counties)))
+				.attr("class", "ggjs-path-map");
+			//zoomed();
+		});
+
+		vector
+			.attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")")
+			.style("stroke-width", 1 / zoom.scale());
 	};
 
 	prototype.drawPointLayer = function (plotArea, layerDef) {
@@ -1129,11 +1281,11 @@ ggjs.Renderer = (function (d3) {
 		var arc, bars;
 
 		arc = d3.svg.arc()
-	        .innerRadius(0)
-	        //.outerRadius(150)
-	        .outerRadius(function (d) {return yAxisHeight - yScale(d[yField]); })
-	        .startAngle(function (d) { console.log("startAngle d: " + d[xField]); console.log("startAngle: " + xScale(d[xField])); return xScale(d[xField]); })
-	        .endAngle(function (d) { console.log("endAngle d: " + d[xField]); console.log("endAngle: " + xScale(d[xField]) + xScale.rangeBand()); return xScale(d[xField]) + xScale.rangeBand(); });
+			.innerRadius(0)
+			//.outerRadius(150)
+			.outerRadius(function (d) {return yAxisHeight - yScale(d[yField]); })
+			.startAngle(function (d) { console.log("startAngle d: " + d[xField]); console.log("startAngle: " + xScale(d[xField])); return xScale(d[xField]); })
+			.endAngle(function (d) { console.log("endAngle d: " + d[xField]); console.log("endAngle: " + xScale(d[xField]) + xScale.rangeBand()); return xScale(d[xField]) + xScale.rangeBand(); });
 
 		bars = plotArea.selectAll("path.ggjs-arc")
 				.data(values)
@@ -1169,8 +1321,9 @@ ggjs.Renderer = (function (d3) {
 		}
 	};
 
-	prototype.drawAxes = function (plot) {
-		var plotDef = this.plotDef();
+	prototype.drawAxes = function () {
+		var plotDef = this.plotDef(),
+			plot = this.renderer.plot;
 
 		switch (plotDef.coord()) {
 			case "cartesian":
@@ -1194,6 +1347,8 @@ ggjs.Renderer = (function (d3) {
 				break;
 			case "polar":
 				console.log("Draw polar axes");
+				break;
+			case "mercator":
 				break;
 			default:
 				throw "Unrecognised coordinate system used."
