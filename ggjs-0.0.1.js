@@ -941,7 +941,8 @@ ggjs.Renderer = (function (d3) {
 			.scale((1 << 12) / 2 / Math.PI)
 			.translate([width / 2, height / 2]);
 
-		var center = projection([-100, 40]);
+		//var center = projection([-100, 40]);	// US
+		var center = projection([-10, 55]);	// UK
 
 		var zoom = d3.behavior.zoom()
 			.scale(projection.scale() * 2 * Math.PI)
@@ -1130,6 +1131,21 @@ ggjs.Renderer = (function (d3) {
 	};
 
 	prototype.drawPointLayer = function (plotArea, layerDef) {
+		var plotDef = this.plotDef();
+
+		switch (plotDef.coord()) {
+			case "cartesian":
+				this.drawCartesianPointLayer(plotArea, layerDef);
+				break;
+			case "mercator":
+				this.drawMapPointLayer(plotArea, layerDef);
+				break;
+			default:
+				throw "Do not know how to draw point for coord " + plotDef.coord();
+		}
+	};
+
+	prototype.drawCartesianPointLayer = function (plotArea, layerDef) {
 		// Draws points (e.g. circles) onto the plot area
 		var plotDef = this.plotDef(),
 			aesmappings = layerDef.aesmappings(),
@@ -1138,7 +1154,8 @@ ggjs.Renderer = (function (d3) {
 			xScale = this.xAxis().scale(),
 			yScale = this.yAxis().scale(),
 			datasetName = layerDef.data(),
-			dataset = plotDef.data().dataset(datasetName),
+			dataset = this.getDataset(datasetName),
+			//dataset = plotDef.data().dataset(datasetName),
 			values = dataset.values(),
 			points;
 
@@ -1165,7 +1182,8 @@ ggjs.Renderer = (function (d3) {
 			xScale = this.xAxis().scale(),
 			yScale = this.yAxis().scale(),
 			datasetName = layerDef.data(),
-			dataset = plotDef.data().dataset(datasetName),
+			dataset = this.getDataset(datasetName),
+			//dataset = plotDef.data().dataset(datasetName),
 			values = dataset.values(),
 			xField, yField, labelField,
 			points;
@@ -1208,23 +1226,24 @@ ggjs.Renderer = (function (d3) {
 			xScale = this.xAxis().scale(),
 			yScale = this.yAxis().scale(),
 			datasetName = layerDef.data(),
-			dataset = plotDef.data().dataset(datasetName),
+			//dataset = plotDef.data().dataset(datasetName),
+			dataset = this.getDataset(datasetName),
 			isStacked = layerDef.useStackedData(),
 			bars, values;
 
-		if (dataset == null) {
-			// Use default dataset for the plot
-			var datasetNames = plotDef.data().names();
-			if (datasetNames.length !== 1) {
-				throw "Expected one DataSet in the Plot to use as the default DataSet";
-			}
-			datasetName = datasetNames[0];
-			dataset = plotDef.data().dataset(datasetName);
+		// if (dataset == null) {
+		// 	// Use default dataset for the plot
+		// 	var datasetNames = plotDef.data().names();
+		// 	if (datasetNames.length !== 1) {
+		// 		throw "Expected one DataSet in the Plot to use as the default DataSet";
+		// 	}
+		// 	datasetName = datasetNames[0];
+		// 	dataset = plotDef.data().dataset(datasetName);
 
-			if (dataset == null) {
-				throw "Couldn't find a layer DataSet or a default DataSet.";
-			}
-		}
+		// 	if (dataset == null) {
+		// 		throw "Couldn't find a layer DataSet or a default DataSet.";
+		// 	}
+		// }
 
 		values = dataset.values();
 
@@ -1379,7 +1398,25 @@ ggjs.Renderer = (function (d3) {
 		return this;
 	};
 
-	
+	prototype.getDataset = function (datasetName) {
+		var plotDef = this.plotDef(),
+			dataset = plotDef.data().dataset(datasetName),
+			datasetNames;
+		if (dataset == null) {
+			// Use default dataset for the plot
+			datasetNames = plotDef.data().names();
+			if (datasetNames.length !== 1) {
+				throw "Expected one DataSet in the Plot to use as the default DataSet";
+			}
+			datasetName = datasetNames[0];
+			dataset = plotDef.data().dataset(datasetName);
+
+			if (dataset == null) {
+				throw "Couldn't find a layer DataSet or a default DataSet.";
+			}
+		}
+		return dataset;
+	};
 
 	prototype.statAcrossLayers = function (aes, stat) {
 		// Looks at the data across all layers for an
@@ -1399,7 +1436,8 @@ ggjs.Renderer = (function (d3) {
 			if (!datasetName) {
 				datasetName = plotDef.defaultDatasetName();
 			}
-			dataset = plotDef.data().dataset(datasetName);
+			//dataset = plotDef.data().dataset(datasetName);
+			dataset = this.getDataset(datasetName);
 			if (dataset == null) {
 				throw "Unable to find dataset with name " + datasetName;
 			}
@@ -1471,7 +1509,8 @@ ggjs.Renderer = (function (d3) {
 			if (!datasetName) {
 				datasetName = plotDef.defaultDatasetName();
 			}
-			dataset = plotDef.data().dataset(datasetName);
+			//dataset = plotDef.data().dataset(datasetName);
+			dataset = this.getDataset(datasetName);
 			if (dataset == null) {
 				throw "Unable to find dataset with name " + datasetName;
 			}

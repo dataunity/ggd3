@@ -8,8 +8,8 @@
         <script src="http://d3js.org/queue.v1.min.js"></script>
 
         <script src="../lib/d3.js" charset="utf-8"></script>
-        <script src="http://d3js.org/d3.geo.tile.v0.min.js"></script>
-        <script src="http://d3js.org/topojson.v1.min.js"></script>
+        <script src="../lib/d3.geo.tile.v0.min.js"></script>
+        <script src="../lib/topojson.v1.min.js"></script>
         <script src="../ggjs-0.0.1.js" charset="utf-8"></script>
 
         <!-- JQuery: only used to help with this page, not needed for ggjs -->
@@ -96,7 +96,7 @@
                             ],
                             "layers": [
                                 {
-                                    "data": "data",
+                                    //"data": "data",
                                     "geom": "bar",
                                     "aesmappings": [
                                         {aes: "x", field: "Product"},
@@ -105,7 +105,7 @@
                                     ]
                                 },
                                 {
-                                    "data": "data",
+                                    //"data": "data",
                                     "geom": "text",
                                     "aesmappings": [
                                         {aes: "x", field: "Product"},
@@ -266,9 +266,8 @@
                 });
             });
 
-            drawChart("map");
-            //ggjs.ggjs.render(chartSpec("bar"));
-
+            //drawChart("map");
+            drawChart("bar");
         </script>
     </body>
 </html>
