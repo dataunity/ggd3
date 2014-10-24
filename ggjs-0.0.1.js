@@ -938,11 +938,14 @@ ggjs.Renderer = (function (d3) {
   //   		height = Math.max(500, window.innerHeight);
 
 		var projection = d3.geo.mercator()
-			.scale((1 << 12) / 2 / Math.PI)
+			//.scale((1 << 12) / 2 / Math.PI) // US
+			.scale((1 << 20) / 2 / Math.PI) // Lambeth
 			.translate([width / 2, height / 2]);
 
 		//var center = projection([-100, 40]);	// US
-		var center = projection([-10, 55]);	// UK
+		//var center = projection([-106, 37.5]);	// US
+		//var center = projection([-10, 55]);	// UK
+		var center = projection([-0.1046, 51.46]);	// Lambeth
 
 		var zoom = d3.behavior.zoom()
 			.scale(projection.scale() * 2 * Math.PI)
@@ -962,6 +965,10 @@ ggjs.Renderer = (function (d3) {
 
 		this.geo.projection = projection;
 	};
+
+	// prototype.zoomed = function () {
+	// 	console.log("Some zooming");
+	// }
 
 	prototype.renderPlot = function () {
 		var plotDef = this.plotDef(),
@@ -1008,7 +1015,16 @@ ggjs.Renderer = (function (d3) {
 				break;
 			case "mercator":
 				//plot.call(this.geo.zoom);
-				plotArea = plot.append("g");
+				plotArea = plot.append("g")
+					.attr("transform", "translate(" + plotDef.plotAreaX() + "," + plotDef.plotAreaY() + ")");
+				//plotArea.on("zoom", function () {console.log("zooming")})
+				var zoom = d3.behavior.zoom()
+					.scale(1 << 12)
+					.scaleExtent([1 << 9, 1 << 23])
+					.translate([250, 250])
+					.on("zoom", function () {console.log("zooming")});
+				//plotArea.call(zoom);
+				plotArea.on("mousemove", function () {console.log("mouse moved")});
 				break;
 		}
 
@@ -1082,6 +1098,7 @@ ggjs.Renderer = (function (d3) {
 
 			image.enter().append("image")
 				.attr("xlink:href", function(d) { return "http://" + ["a", "b", "c", "d"][Math.random() * 4 | 0] + ".tiles.mapbox.com/v3/examples.map-i86nkdio/" + d[2] + "/" + d[0] + "/" + d[1] + ".png"; })
+				.attr("class", "ggjs-tile")
 				.attr("width", 1)
 				.attr("height", 1)
 				.attr("x", function(d) { return d[0]; })
@@ -1117,36 +1134,39 @@ ggjs.Renderer = (function (d3) {
 			.projection(projection);
 
 		var vector = svg.append("path");
+		var vector2 = svg.append("g")
+			.attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")");
+			//.style("stroke-width", 1 / zoom.scale());
 
 		d3.json("data/us.json", function(error, us) {
 			//svg.call(zoom);
 			vector.attr("d", path(topojson.mesh(us, us.objects.counties)))
 				.attr("class", "ggjs-path-map");
-			//zoomed();
-		});
 
-		vector
+			aa = [-122.490402, 37.786453];
+			bb = [-122.389809, 37.72728];
+			vector2.selectAll("circle")
+				.data([aa,bb])
+				.enter().append("circle")
+					// .attr("cx", function (d) { console.log(projection(d)); return projection(d)[0]; })
+					// .attr("cy", function (d) { return projection(d)[1]; })
+					.attr("transform", function(d) {return "translate(" + projection(d) + ")";})
+					.attr("r", 5 / zoom.scale())
+					.attr("fill", "red")
+			//zoomed();
+
+			vector
 			.attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")")
 			.style("stroke-width", 1 / zoom.scale());
+			// vector2
+			// 	.attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")")
+			// 	.style("stroke-width", 1 / zoom.scale());
+		});
+
+
 	};
 
 	prototype.drawPointLayer = function (plotArea, layerDef) {
-		var plotDef = this.plotDef();
-
-		switch (plotDef.coord()) {
-			case "cartesian":
-				this.drawCartesianPointLayer(plotArea, layerDef);
-				break;
-			case "mercator":
-				this.drawMapPointLayer(plotArea, layerDef);
-				break;
-			default:
-				throw "Do not know how to draw point for coord " + plotDef.coord();
-		}
-	};
-
-	prototype.drawCartesianPointLayer = function (plotArea, layerDef) {
-		// Draws points (e.g. circles) onto the plot area
 		var plotDef = this.plotDef(),
 			aesmappings = layerDef.aesmappings(),
 			xField = aesmappings.findByAes("x").field(),
@@ -1156,10 +1176,23 @@ ggjs.Renderer = (function (d3) {
 			datasetName = layerDef.data(),
 			dataset = this.getDataset(datasetName),
 			//dataset = plotDef.data().dataset(datasetName),
-			values = dataset.values(),
-			points;
+			values = dataset.values();
+		
+		switch (plotDef.coord()) {
+			case "cartesian":
+				this.drawCartesianPointLayer(plotArea, values, aesmappings, xField, yField, xScale, yScale);
+				break;
+			case "mercator":
+				this.drawMapPointLayer(plotArea, values, aesmappings, xField, yField, xScale, yScale);
+				break;
+			default:
+				throw "Do not know how to draw point for coord " + plotDef.coord();
+		}
+	};
 
-		points = plotArea.selectAll(".ggjs-point")
+	prototype.drawCartesianPointLayer = function (plotArea, values, aesmappings, xField, yField, xScale, yScale) {
+		// Draws points (e.g. circles) onto the plot area
+		var points = plotArea.selectAll(".ggjs-point")
 				.data(values)
 			.enter().append("circle")
 				.attr("class", "ggjs-point")
@@ -1168,7 +1201,58 @@ ggjs.Renderer = (function (d3) {
 				.attr("cy", function (d) { return yScale(d[yField]); });
 
 		this.applyFillColour(points, aesmappings);
+	};
+
+	prototype.drawMapPointLayer = function (plotArea, values, aesmappings, xField, yField, xScale, yScale) {
+		// Draws points (e.g. circles) onto the plot area
+		var projection = this.geo.projection,
+			zoom = this.geo.zoom,
+			plot = this.renderer.plot;
+		console.log("Drawing map points")
+		var svg = plot;
 		
+		// var points = plotArea.selectAll(".ggjs-point")
+		// 		.data(values)
+		// 	.enter().append("circle")
+		// 		.attr("class", "ggjs-point")
+		// 		.attr("r", 3.5)
+		// 		.attr("cx", function (d) { return xScale(d[xField]); })
+		// 		.attr("cy", function (d) { return yScale(d[yField]); });
+		console.log(values[0][xField])
+		console.log(values[0][yField])
+		console.log( projection([ +(values[0][yField]), +(values[0][xField]) ]) )
+
+		// var points = plotArea.selectAll(".pin")
+		// 		.data(values)
+		// 	.enter().append("circle", ".pin")
+		// 		.attr("r", 5)
+		// 		.attr("transform", function(d) {
+		// 			return "translate(" + projection([
+		// 			  d[yField],
+		// 			  d[xField]
+		// 			]) + ")"; });
+		var vector2 = svg.append("g")
+			.attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")");
+			//.style("stroke-width", 1 / zoom.scale());
+
+		vector2.selectAll("circle")
+			.data(values)
+			.enter().append("circle")
+				// .attr("cx", function (d) { console.log(projection(d)); return projection(d)[0]; })
+				// .attr("cy", function (d) { return projection(d)[1]; })
+				.attr("transform", function(d) {return "translate(" + projection([ +d[yField], +d[xField] ]) + ")";})
+				.attr("r", 5 / zoom.scale())
+				.attr("fill", "rgba(255,0,0,0.6)")
+				
+		// var coordinates = projection([mylon, mylat]);
+		// plotArea.selectAll(".circle")
+		// 		.data(values)
+		// 	.enter().append('circle', ".circle")
+		// 		.attr('cx', function (d) { return projection([ +d[yField], +d[xField] ])[0]; } )
+		// 		.attr('cy', function (d) { return projection([ +d[yField], +d[xField] ])[1]; } )
+		// 		.attr('r', 5);
+
+		//this.applyFillColour(points, aesmappings);
 	};
 
 	prototype.drawTextLayer = function (plotArea, layerDef) {

@@ -204,8 +204,8 @@
                             "data": [
                                 {
                                     "name": "data",
-                                    "url": "data/iris-flowers.tsv",
-                                    "contentType": "text/tab-separated-values"
+                                    "url": "data/lambethgppractisesll.csv",
+                                    "contentType": "text/csv"
                                 }
                             ],
                             "scales": [
@@ -224,11 +224,20 @@
                                     "stat": null,
                                     "posadj": null
                                 },
+                                // {
+                                //     "data": null,
+                                //     "geom": "path",
+                                //     "stat": null,
+                                //     "posadj": null
+                                // },
                                 {
-                                    "data": null,
-                                    "geom": "path",
-                                    "stat": null,
-                                    "posadj": null
+                                    "data": "data",
+                                    "geom": "point",
+                                    "aesmappings": [
+                                        {aes: "x", field: "LATITUDE"},
+                                        {aes: "y", field: "LONGITUDE"},
+                                        {aes: "fill", field: "CITY", scaleName: "color"}
+                                    ]
                                 }
                             ]
                         };
@@ -266,8 +275,8 @@
                 });
             });
 
-            //drawChart("map");
-            drawChart("bar");
+            drawChart("map");
+            //drawChart("bar");
         </script>
     </body>
 </html>
