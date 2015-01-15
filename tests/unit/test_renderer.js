@@ -113,6 +113,7 @@ describe("Module: ggjs.Renderer", function() {
 		it("should find all values for across layers", function () {
 	        var spec = {
 			        "selector": "#chart",
+			        "width": 500,
 			        "coord": "cartesian",
 			        "data": [
 			            {
@@ -170,6 +171,7 @@ describe("Module: ggjs.Renderer", function() {
 		it("should find max for across layers with stacked data", function () {
 	        var spec = {
 			        "selector": "#chart",
+			        "width": 500,
 			        "coord": "cartesian",
 			        "data": [
 			            {
@@ -247,6 +249,7 @@ describe("Module: ggjs.Renderer", function() {
 		it("should find scale def", function() {
 			var spec = {
 			        "selector": "#chart",
+			        "width": 500,
 			        "coord": "cartesian",
 			        "scales": [
 			            {"name": "x"},
