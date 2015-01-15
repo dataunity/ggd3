@@ -675,7 +675,9 @@ ggjs.Plot = (function () {
 		this.plot = {
 			// ToDo: get defaults from config?
 			selector: spec.selector,
-			width: spec.width || 500,
+			// Note: let renderer set default width
+			// width: spec.width || 500,
+			width: spec.width,
 			height: spec.height || 500,
 			padding: ggjs.padding(spec.padding || {}),
 			data: ggjs.datasets(spec.data || []),
@@ -822,16 +824,32 @@ ggjs.plot = function(p) {
 };
 
 ggjs.Renderer = (function (d3) {
-	var renderer = function(plotDef) {
+	var renderer = function (plotDef) {
 		this.renderer = {
 			plotDef: plotDef,
 			plot: null,	// The element to draw to
 			xAxis: null,
 			yAxis: null,
 			datasetsRetrieved: {},
-			warnings: []
+			warnings: [],
+			defaultFillColor: "rgb(31, 119, 180)"
 		};
 		this.geo = {};
+
+		var width = plotDef.width(),
+			parentWidth;
+		if (typeof width === 'undefined' || width == null) {
+			// Set width to parent container width
+			try {
+				parentWidth = d3.select(plotDef.selector()).node().offsetWidth;
+			} catch (err) {
+				throw "Couldn't find the width of the parent element."; 
+			}
+			if (typeof parentWidth === 'undefined' || parentWidth == null) {
+				throw "Couldn't find the width of the parent element.";
+			}
+			this.renderer.plotDef.width(parentWidth);
+		}
 	};
 
 	var prototype = renderer.prototype;
@@ -1409,18 +1427,21 @@ ggjs.Renderer = (function (d3) {
 		// are matched across layers
 		console.log("Warning: move colour mapping to all levels.");
 		var plotDef = this.plotDef(),
-			fillAesMap = aesmappings.findByAes("fill");
+			fillAesMap = aesmappings.findByAes("fill"),
+			defaultFillColor = this.renderer.defaultFillColor;
 		if (fillAesMap != null) {
 			var colorField = fillAesMap.field(),
 				colorScaleDef = this.scaleDef(fillAesMap.scaleName()),
 				colorScale;
 			if (colorScaleDef == null) {
-				this.warning("Couldn't set colour on layer - no valid colour scale.")
+				this.warning("Couldn't set colour on layer - fill colour scale missing.")
+				svgItems.style("fill", function(d) { return defaultFillColor; });
 			} else {
 				colorScale = this.scale(colorScaleDef);
 				svgItems.style("fill", function(d) { return colorScale(d[colorField]); });
-			}
-			
+			}			
+		} else {
+			svgItems.style("fill", function(d) { return defaultFillColor; });
 		}
 	};
 
