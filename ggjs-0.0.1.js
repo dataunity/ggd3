@@ -835,7 +835,12 @@ ggjs.Renderer = (function (d3) {
 			defaultFillColor: "rgb(31, 119, 180)"
 		};
 		this.geo = {};
+		this.dataAttrXField = "data-ggjs-x-field";
+		this.dataAttrXValue = "data-ggjs-x-value";
+		this.dataAttrYField = "data-ggjs-y-field";
+		this.dataAttrYValue = "data-ggjs-y-value";
 
+		// Width: autoset width if width is missing
 		var width = plotDef.width(),
 			parentWidth;
 		if (typeof width === 'undefined' || width == null) {
@@ -1225,9 +1230,12 @@ ggjs.Renderer = (function (d3) {
 		// Draws points (e.g. circles) onto the plot area
 		var projection = this.geo.projection,
 			zoom = this.geo.zoom,
-			plot = this.renderer.plot;
-		console.log("Drawing map points")
-		var svg = plot;
+			plot = this.renderer.plot,
+			dataAttrXField = this.dataAttrXField,
+			dataAttrXValue = this.dataAttrXValue,
+			dataAttrYField = this.dataAttrYField,
+			dataAttrYValue = this.dataAttrYValue,
+			svg = plot;
 		
 		// var points = plotArea.selectAll(".ggjs-point")
 		// 		.data(values)
@@ -1236,9 +1244,9 @@ ggjs.Renderer = (function (d3) {
 		// 		.attr("r", 3.5)
 		// 		.attr("cx", function (d) { return xScale(d[xField]); })
 		// 		.attr("cy", function (d) { return yScale(d[yField]); });
-		console.log(values[0][xField])
-		console.log(values[0][yField])
-		console.log( projection([ +(values[0][yField]), +(values[0][xField]) ]) )
+		// console.log(values[0][xField])
+		// console.log(values[0][yField])
+		// console.log( projection([ +(values[0][yField]), +(values[0][xField]) ]) )
 
 		// var points = plotArea.selectAll(".pin")
 		// 		.data(values)
@@ -1261,6 +1269,10 @@ ggjs.Renderer = (function (d3) {
 				.attr("transform", function(d) {return "translate(" + projection([ +d[yField], +d[xField] ]) + ")";})
 				.attr("r", 5 / zoom.scale())
 				.attr("fill", "rgba(255,0,0,0.6)")
+				.attr(dataAttrXField, xField)
+				.attr(dataAttrXValue, function (d) { return d[xField]; })
+				.attr(dataAttrYField, yField)
+				.attr(dataAttrYValue, function (d) { return d[yField]; });
 				
 		// var coordinates = projection([mylon, mylat]);
 		// plotArea.selectAll(".circle")
@@ -1381,7 +1393,11 @@ ggjs.Renderer = (function (d3) {
 	};
 
 	prototype.drawCartesianBars = function (plotArea, values, xField, yField, xScale, yScale, yAxisHeight, isStacked) {
-		var bars = plotArea.selectAll("rect.ggjs-bar")
+		var dataAttrXField = this.dataAttrXField,
+			dataAttrXValue = this.dataAttrXValue,
+			dataAttrYField = this.dataAttrYField,
+			dataAttrYValue = this.dataAttrYValue,
+			bars = plotArea.selectAll("rect.ggjs-bar")
 				.data(values)
 			.enter().append("rect")
 				.attr("class", "ggjs-bar")
@@ -1394,7 +1410,11 @@ ggjs.Renderer = (function (d3) {
 					}
 				})
 				.attr("height", function(d) { return yAxisHeight - yScale(d[yField]); })
-				.attr("width", xScale.rangeBand());
+				.attr("width", xScale.rangeBand())
+				.attr(dataAttrXField, xField)
+				.attr(dataAttrXValue, function (d) { return d[xField]; })
+				.attr(dataAttrYField, yField)
+				.attr(dataAttrYValue, function (d) { return d[yField]; });
 		return bars;
 	};
 

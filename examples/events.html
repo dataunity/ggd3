@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>GGJS</title>
+        <link href="css/site.css" rel="stylesheet" />
+        <link href="../css/theme/default/ggjs-0.0.1.css" rel="stylesheet" />
+
+        <!-- ToDo: remove this dependency or package into ggjs (see ggjs.renderer.render() method) -->
+        <script src="http://d3js.org/queue.v1.min.js"></script>
+
+        <script src="../lib/d3.js" charset="utf-8"></script>
+        <script src="../lib/d3.geo.tile.v0.min.js"></script>
+        <script src="../lib/topojson.v1.min.js"></script>
+        <script src="../ggjs-0.0.1.js" charset="utf-8"></script>
+
+        <!-- JQuery: only used to help with this page, not needed for ggjs -->
+        <script src="lib/jquery-1.11.1.js" charset="utf-8"></script>
+        <style type="text/css">
+            
+
+            .container {
+                width: 100%;
+            }
+            .chart-panel {
+                float:left;
+                width:70%;
+                height: 400px;
+                outline: 4px solid #999;
+                /*background:red;*/
+            }
+            .results-panel {
+                float:left;
+                width:30%;
+                height: 400px;
+                color: white;
+                outline: 4px solid #999;
+                background: #333;
+            }
+            .results {
+                padding: 10px;
+                font-weight: bold;
+            }
+            .clear {
+                clear: both;
+            }
+
+            /*SVG elements*/
+            rect {
+                cursor: pointer;
+            }
+            circle {
+                cursor: pointer;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Events</h1>
+        <p>Regular javascript events can be attached to the plots.</p>
+        <div class="container">
+            <div id="chart" class="chart-panel"></div>
+            <div class="results-panel">
+                <div id="results-text" class="results">Click the chart</div>
+            </div>
+        </div>
+        <div class="container">
+            <div id="map" class="chart-panel"></div>
+            <div class="results-panel">
+                <div id="map-text" class="results">Click the chart</div>
+            </div>
+        </div>
+        <script>
+            var widgetLookup = {
+                "Widget A": "The bestselling widget this year",
+                "Widget B": "This widget is soon to be replaced with Widget X",
+                "Widget C": "Very popular with users"
+            }
+            function chartSpec (chartType) {
+                switch (chartType) {
+                    case "bar":
+                        return {
+                            "selector": "#chart",
+                            "coord": "cartesian",
+                            // "width": 500,
+                            "height": 400,
+                            "padding": {"left":30, "top":10, "bottom":30, "right":10},
+                            "data": [
+                                {
+                                    "name": "data",
+                                    "url": "data/product_stock.csv",
+                                    "contentType": "text/csv"
+                                }
+                            ],
+                            "scales": [
+                                {"name": "x", "type": "ordinal"},
+                                {"name": "y", "type": "linear"},
+                                {"name": "color", "type": "category10"},
+                            ],
+                            "axes": [
+                                {"type": "x", "scaleName": "x"},
+                                {"type": "y", "scaleName": "y"}
+                            ],
+                            "layers": [
+                                {
+                                    //"data": "data",
+                                    "geom": "bar",
+                                    "aesmappings": [
+                                        {aes: "x", field: "Product"},
+                                        {aes: "y", field: "Stock"},
+                                        {aes: "fill", field: "Product", scaleName: "color"}
+                                    ]
+                                },
+                                {
+                                    //"data": "data",
+                                    "geom": "text",
+                                    "aesmappings": [
+                                        {aes: "x", field: "Product"},
+                                        {aes: "y", field: "Stock"},
+                                        {aes: "label", field: "Stock"},
+                                        {aes: "fill", field: "Product", scaleName: "color"}
+                                    ]
+                                }
+                            ]
+                        };
+                        break;
+
+                    case "map":
+                        return {
+                            "selector": "#map",
+                            "coord": "mercator",
+                            // "width": 500,
+                            "height": 400,
+                            "padding": {"left":30, "top":10, "bottom":30, "right":10},
+                            "data": [
+                                {
+                                    "name": "data",
+                                    "url": "data/lambethgppractisesll.csv",
+                                    "contentType": "text/csv"
+                                }
+                            ],
+                            "scales": [
+                                {"name": "x", "type": "linear"},
+                                {"name": "y", "type": "linear"},
+                                {"name": "color", "type": "category10"},
+                            ],
+                            "axes": [
+                                {"type": "x", "scaleName": "x"},
+                                {"type": "y", "scaleName": "y"}
+                            ],
+                            "layers": [
+                                {
+                                    "data": null,
+                                    "geom": "geotiles",
+                                    "stat": null,
+                                    "posadj": null
+                                },
+                                // {
+                                //     "data": null,
+                                //     "geom": "path",
+                                //     "stat": null,
+                                //     "posadj": null
+                                // },
+                                {
+                                    "data": "data",
+                                    "geom": "point",
+                                    "aesmappings": [
+                                        {aes: "x", field: "LATITUDE"},
+                                        {aes: "y", field: "LONGITUDE"},
+                                        {aes: "fill", field: "CITY", scaleName: "color"}
+                                    ]
+                                }
+                            ]
+                        };
+                        break;
+
+                    default:
+                        return null;
+                }
+            }
+
+            function drawChart (chartType) {
+                var spec = chartSpec(chartType),
+                    plotDef, renderer, i;
+                if (spec == null) {
+                    $("#feedback").text("No spec for the requested chart type.");
+                } else {
+                    $("#feedback").text("");
+                }
+                plotDef = ggjs.plot(spec);
+                renderer = ggjs.renderer(plotDef);
+                renderer.render();
+                // ToDo: warnings wont work as rendering is async
+                // if (renderer.warnings() && renderer.warnings().length > 0) {
+                //     console.log("There were warnings whilst rendering:");
+                //     for (i = 0; i < renderer.warnings().length; i++) {
+                //         console.log(renderer.warnings()[i]);
+                //     }
+                // }
+            }
+
+            $(document).ready(function () {
+                drawChart("bar");
+                drawChart("map");
+
+                // ToDo: implement promises for rendering so
+                // timeout can be removed
+                setTimeout(function() {
+                    $("rect").click(function (evnt) {
+                        var target = $(evnt.target),
+                            xField = target.data("ggjsXField"),
+                            xValue = target.data("ggjsXValue"),
+                            yField = target.data("ggjsYField"),
+                            yValue = target.data("ggjsYValue");
+                        $("#results-text").html('<div> \
+                            <div> \
+                                <span>' + xField + ':</span> \
+                                <span>' + xValue + '</span> \
+                            </div> \
+                            <div> \
+                                <span>' + yField + ':</span> \
+                                <span>' + yValue + '</span> \
+                            </div> \
+                            <p>Extra widget info: ' + widgetLookup[xValue] + '</p> \
+                        </div>');
+                    });
+                }, 100);
+
+                setTimeout(function() {
+                    $("circle").click(function (evnt) {
+                        var target = $(evnt.target),
+                            xField = target.data("ggjsXField"),
+                            xValue = target.data("ggjsXValue"),
+                            yField = target.data("ggjsYField"),
+                            yValue = target.data("ggjsYValue");
+                        $("#map-text").html('<div> \
+                            <div> \
+                                <span>' + xField + ':</span> \
+                                <span>' + xValue + '</span> \
+                            </div> \
+                            <div> \
+                                <span>' + yField + ':</span> \
+                                <span>' + yValue + '</span> \
+                            </div> \
+                        </div>');
+                    });
+                }, 100);
+
+            });
+
+            drawChart("bar");
+        </script>
+    </body>
+</html>
