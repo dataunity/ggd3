@@ -1,0 +1,32 @@
+{
+    "selector": "#chart",
+    "coord": "cartesian",
+    "height": 200,
+    "padding": {"left":30, "top":10, "bottom":30, "right":10},
+    "data": [
+        {
+            "name": "data",
+            "values": [
+                {"Product": "Level", "Stock": 20}
+            ]
+        }
+    ],
+    "scales": [
+        {"name": "x", "type": "ordinal"},
+        {"name": "y", "type": "linear", "domain": [0, 30]},
+        {"name": "color", "type": "category10"}
+    ],
+    "axes": [
+        {"type": "x", "scaleName": "x"},
+        {"type": "y", "scaleName": "y"}
+    ],
+    "layers": [
+        {
+            "geom": "point",
+            "aesmappings": [
+                {"aes": "x", "field": "Product"},
+                {"aes": "y", "field": "Stock"}
+            ]
+        }
+    ]
+}

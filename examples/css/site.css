@@ -6,3 +6,8 @@ body {
     color: #333333;
     background-color: #ffffff;
 }
+
+h1,
+h2 {
+    color: #0089ce;
+}

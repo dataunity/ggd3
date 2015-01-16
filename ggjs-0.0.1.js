@@ -878,6 +878,7 @@ ggjs.Renderer = (function (d3) {
 
 	prototype.render = function () {
 		var this_ = this;
+		// Clear contents (so they disapper in the event of failed data load)
 		d3.select(this.plotDef().selector()).select("svg").remove();
 		// Fetch data then render plot
 		this.fetchData(function () { this_.renderPlot(); })
@@ -996,7 +997,8 @@ ggjs.Renderer = (function (d3) {
 	prototype.renderPlot = function () {
 		var plotDef = this.plotDef(),
 			plot;
-		
+
+		// d3.select(this.plotDef().selector()).select("svg").remove();
 		d3.select(plotDef.selector()).html("");
 		plot = d3.select(plotDef.selector())
 			.append("svg")
@@ -1213,14 +1215,18 @@ ggjs.Renderer = (function (d3) {
 		}
 	};
 
+	// Draws points (e.g. circles) onto the plot area
 	prototype.drawCartesianPointLayer = function (plotArea, values, aesmappings, xField, yField, xScale, yScale) {
-		// Draws points (e.g. circles) onto the plot area
-		var points = plotArea.selectAll(".ggjs-point")
+		var xScaleType = this.xAxisScaleDef().type(),
+			xOffset = xScaleType === 'ordinal' ? Math.ceil(xScale.rangeBand() / 2) : 0,
+			points;
+		
+		points = plotArea.selectAll(".ggjs-point")
 				.data(values)
 			.enter().append("circle")
 				.attr("class", "ggjs-point")
 				.attr("r", 3.5)
-				.attr("cx", function (d) { return xScale(d[xField]); })
+				.attr("cx", function (d) { return xScale(d[xField]) + xOffset; })
 				.attr("cy", function (d) { return yScale(d[yField]); });
 
 		this.applyFillColour(points, aesmappings);
@@ -1668,8 +1674,11 @@ ggjs.Renderer = (function (d3) {
 			max,
 			allValues = [];
 
-		// If scale domain hasn't been set, use data to find it
-		if (!scaleDef.hasDomain()) {
+		
+		if (scaleDef.hasDomain()) {
+			scale.domain(scaleDef.domain());
+		} else {
+			// If scale domain hasn't been set, use data to find it
 			if (scaleDef.isQuantitative()) {
 				max = this.statAcrossLayers(aes, "max");
 				if (!isNaN(max)) {

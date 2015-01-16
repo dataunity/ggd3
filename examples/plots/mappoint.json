@@ -1,0 +1,39 @@
+{
+    "selector": "#map",
+    "coord": "mercator",
+    "height": 400,
+    "padding": {"left":30, "top":10, "bottom":30, "right":10},
+    "data": [
+        {
+            "name": "data",
+            "url": "data/lambethgppractisesll.csv",
+            "contentType": "text/csv"
+        }
+    ],
+    "scales": [
+        {"name": "x", "type": "linear"},
+        {"name": "y", "type": "linear"},
+        {"name": "color", "type": "category10"}
+    ],
+    "axes": [
+        {"type": "x", "scaleName": "x"},
+        {"type": "y", "scaleName": "y"}
+    ],
+    "layers": [
+        {
+            "data": null,
+            "geom": "geotiles",
+            "stat": null,
+            "posadj": null
+        },
+        {
+            "data": "data",
+            "geom": "point",
+            "aesmappings": [
+                {"aes": "x", "field": "LATITUDE"},
+                {"aes": "y", "field": "LONGITUDE"},
+                {"aes": "fill", "field": "CITY", "scaleName": "color"}
+            ]
+        }
+    ]
+}

@@ -1,0 +1,41 @@
+{
+    "selector": "#chart",
+    "coord": "cartesian",
+    "height": 400,
+    "padding": {"left":30, "top":10, "bottom":30, "right":10},
+    "data": [
+        {
+            "name": "data",
+            "url": "data/product_stock.csv",
+            "contentType": "text/csv"
+        }
+    ],
+    "scales": [
+        {"name": "x", "type": "ordinal"},
+        {"name": "y", "type": "linear"},
+        {"name": "color", "type": "category10"}
+    ],
+    "axes": [
+        {"type": "x", "scaleName": "x"},
+        {"type": "y", "scaleName": "y"}
+    ],
+    "layers": [
+        {
+            "geom": "bar",
+            "aesmappings": [
+                {"aes": "x", "field": "Product"},
+                {"aes": "y", "field": "Stock"},
+                {"aes": "fill", "field": "Product", "scaleName": "color"}
+            ]
+        },
+        {
+            "geom": "text",
+            "aesmappings": [
+                {"aes": "x", "field": "Product"},
+                {"aes": "y", "field": "Stock"},
+                {"aes": "label", "field": "Stock"},
+                {"aes": "fill", "field": "Product", "scaleName": "color"}
+            ]
+        }
+    ]
+}

@@ -26,7 +26,7 @@
                 width:70%;
                 height: 400px;
                 outline: 4px solid #999;
-                /*background:red;*/
+                /*background: #333;*/
             }
             .results-panel {
                 float:left;
@@ -54,8 +54,9 @@
         </style>
     </head>
     <body>
-        <h1>Events</h1>
+        <h1>Interaction</h1>
         <p>Regular javascript events can be attached to the plots.</p>
+        <div id="feedback"></div>
         <div class="container">
             <div id="chart" class="chart-panel"></div>
             <div class="results-panel">
@@ -74,112 +75,9 @@
                 "Widget B": "This widget is soon to be replaced with Widget X",
                 "Widget C": "Very popular with users"
             }
-            function chartSpec (chartType) {
-                switch (chartType) {
-                    case "bar":
-                        return {
-                            "selector": "#chart",
-                            "coord": "cartesian",
-                            // "width": 500,
-                            "height": 400,
-                            "padding": {"left":30, "top":10, "bottom":30, "right":10},
-                            "data": [
-                                {
-                                    "name": "data",
-                                    "url": "data/product_stock.csv",
-                                    "contentType": "text/csv"
-                                }
-                            ],
-                            "scales": [
-                                {"name": "x", "type": "ordinal"},
-                                {"name": "y", "type": "linear"},
-                                {"name": "color", "type": "category10"},
-                            ],
-                            "axes": [
-                                {"type": "x", "scaleName": "x"},
-                                {"type": "y", "scaleName": "y"}
-                            ],
-                            "layers": [
-                                {
-                                    //"data": "data",
-                                    "geom": "bar",
-                                    "aesmappings": [
-                                        {aes: "x", field: "Product"},
-                                        {aes: "y", field: "Stock"},
-                                        {aes: "fill", field: "Product", scaleName: "color"}
-                                    ]
-                                },
-                                {
-                                    //"data": "data",
-                                    "geom": "text",
-                                    "aesmappings": [
-                                        {aes: "x", field: "Product"},
-                                        {aes: "y", field: "Stock"},
-                                        {aes: "label", field: "Stock"},
-                                        {aes: "fill", field: "Product", scaleName: "color"}
-                                    ]
-                                }
-                            ]
-                        };
-                        break;
 
-                    case "map":
-                        return {
-                            "selector": "#map",
-                            "coord": "mercator",
-                            // "width": 500,
-                            "height": 400,
-                            "padding": {"left":30, "top":10, "bottom":30, "right":10},
-                            "data": [
-                                {
-                                    "name": "data",
-                                    "url": "data/lambethgppractisesll.csv",
-                                    "contentType": "text/csv"
-                                }
-                            ],
-                            "scales": [
-                                {"name": "x", "type": "linear"},
-                                {"name": "y", "type": "linear"},
-                                {"name": "color", "type": "category10"},
-                            ],
-                            "axes": [
-                                {"type": "x", "scaleName": "x"},
-                                {"type": "y", "scaleName": "y"}
-                            ],
-                            "layers": [
-                                {
-                                    "data": null,
-                                    "geom": "geotiles",
-                                    "stat": null,
-                                    "posadj": null
-                                },
-                                // {
-                                //     "data": null,
-                                //     "geom": "path",
-                                //     "stat": null,
-                                //     "posadj": null
-                                // },
-                                {
-                                    "data": "data",
-                                    "geom": "point",
-                                    "aesmappings": [
-                                        {aes: "x", field: "LATITUDE"},
-                                        {aes: "y", field: "LONGITUDE"},
-                                        {aes: "fill", field: "CITY", scaleName: "color"}
-                                    ]
-                                }
-                            ]
-                        };
-                        break;
-
-                    default:
-                        return null;
-                }
-            }
-
-            function drawChart (chartType) {
-                var spec = chartSpec(chartType),
-                    plotDef, renderer, i;
+            function drawPlot (spec) {
+                var plotDef, renderer, i;
                 if (spec == null) {
                     $("#feedback").text("No spec for the requested chart type.");
                 } else {
@@ -198,55 +96,68 @@
             }
 
             $(document).ready(function () {
-                drawChart("bar");
-                drawChart("map");
+                $.getJSON("plots/barplot.json")
+                    .then(function (spec) {
+                        drawPlot(spec);
 
-                // ToDo: implement promises for rendering so
-                // timeout can be removed
-                setTimeout(function() {
-                    $("rect").click(function (evnt) {
-                        var target = $(evnt.target),
-                            xField = target.data("ggjsXField"),
-                            xValue = target.data("ggjsXValue"),
-                            yField = target.data("ggjsYField"),
-                            yValue = target.data("ggjsYValue");
-                        $("#results-text").html('<div> \
-                            <div> \
-                                <span>' + xField + ':</span> \
-                                <span>' + xValue + '</span> \
-                            </div> \
-                            <div> \
-                                <span>' + yField + ':</span> \
-                                <span>' + yValue + '</span> \
-                            </div> \
-                            <p>Extra widget info: ' + widgetLookup[xValue] + '</p> \
-                        </div>');
+                        // ToDo: implement promises for rendering so
+                        // timeout can be removed
+                        setTimeout(function() {
+                            $("rect").click(function (evnt) {
+                                console.log("clicked")
+                                var target = $(evnt.target),
+                                    xField = target.data("ggjsXField"),
+                                    xValue = target.data("ggjsXValue"),
+                                    yField = target.data("ggjsYField"),
+                                    yValue = target.data("ggjsYValue");
+                                $("#results-text").html('<div> \
+                                    <div> \
+                                        <span>' + xField + ':</span> \
+                                        <span>' + xValue + '</span> \
+                                    </div> \
+                                    <div> \
+                                        <span>' + yField + ':</span> \
+                                        <span>' + yValue + '</span> \
+                                    </div> \
+                                    <p>Extra widget info: ' + widgetLookup[xValue] + '</p> \
+                                </div>');
+                            });
+                        }, 100);
+                    })
+                    .fail(function (jqxhr, textStatus, error) {
+                        $("#feedback").append("error " + textStatus + ". " + error);
                     });
-                }, 100);
 
-                setTimeout(function() {
-                    $("circle").click(function (evnt) {
-                        var target = $(evnt.target),
-                            xField = target.data("ggjsXField"),
-                            xValue = target.data("ggjsXValue"),
-                            yField = target.data("ggjsYField"),
-                            yValue = target.data("ggjsYValue");
-                        $("#map-text").html('<div> \
-                            <div> \
-                                <span>' + xField + ':</span> \
-                                <span>' + xValue + '</span> \
-                            </div> \
-                            <div> \
-                                <span>' + yField + ':</span> \
-                                <span>' + yValue + '</span> \
-                            </div> \
-                        </div>');
+                $.getJSON("plots/mappoint.json")
+                    .then(function (spec) {
+                        drawPlot(spec);
+
+                        // ToDo: implement promises for rendering so
+                        // timeout can be removed
+                        setTimeout(function() {
+                            $("circle").click(function (evnt) {
+                                var target = $(evnt.target),
+                                    xField = target.data("ggjsXField"),
+                                    xValue = target.data("ggjsXValue"),
+                                    yField = target.data("ggjsYField"),
+                                    yValue = target.data("ggjsYValue");
+                                $("#map-text").html('<div> \
+                                    <div> \
+                                        <span>' + xField + ':</span> \
+                                        <span>' + xValue + '</span> \
+                                    </div> \
+                                    <div> \
+                                        <span>' + yField + ':</span> \
+                                        <span>' + yValue + '</span> \
+                                    </div> \
+                                </div>');
+                            });
+                        }, 100);
+                    })
+                    .fail(function (jqxhr, textStatus, error) {
+                        $("#feedback").append("error " + textStatus + ". " + error);
                     });
-                }, 100);
-
             });
-
-            drawChart("bar");
         </script>
     </body>
 </html>

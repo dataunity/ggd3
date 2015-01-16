@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>GGJS</title>
+        <link href="css/site.css" rel="stylesheet" />
+        <link href="../css/theme/default/ggjs-0.0.1.css" rel="stylesheet" />
+
+        <!-- ToDo: remove this dependency or package into ggjs (see ggjs.renderer.render() method) -->
+        <script src="http://d3js.org/queue.v1.min.js"></script>
+
+        <script src="../lib/d3.js" charset="utf-8"></script>
+        <script src="../lib/d3.geo.tile.v0.min.js"></script>
+        <script src="../lib/topojson.v1.min.js"></script>
+        <script src="../ggjs-0.0.1.js" charset="utf-8"></script>
+
+        <!-- JQuery: only used to help with this page, not needed for ggjs -->
+        <script src="lib/jquery-1.11.1.js" charset="utf-8"></script>
+    </head>
+    <body>
+        <h1>Realtime simulation</h1>
+        <div id="feedback"></div>
+        <h2>Single value</h2>
+        <div id="chart"></div>
+        <h2>Rolling values</h2>
+        <div id="chart2"></div>
+        <script>
+
+            function getLatestData () {
+                var min = 20,
+                    max = 30,
+                    newVal = Math.random() * (max - min) + min;
+                return [
+                    {"Product": "Level", "Stock": newVal}
+                ]
+            }
+
+            function getLatestDataInteval (lastInteval) {
+                var min = 20,
+                    max = 30,
+                    newVal = Math.random() * (max - min) + min;
+                return {"Product": String(lastInteval + 1), "Stock": newVal};
+            }
+
+            $(document).ready(function () {
+
+                // Single item updating
+                $.getJSON("plots/realtimebarplot.json")
+                    .then(function (spec) {
+                        plotDef = ggjs.plot(spec);
+                        renderer = ggjs.renderer(plotDef);
+                        renderer.render();
+
+                        // Simulate realtime data being collected
+                        // periodically
+                        setInterval(function() {
+                            var latestData = getLatestData();
+                            renderer.plotDef().data().dataset("data").values(latestData);
+                            renderer.renderPlot();
+                            // console.log(renderer.plotDef().data().dataset("data").values())
+                            // console.log(renderer.plotDef().data())
+                            // renderer.plotDef().data().values();
+                        }, 700);
+                    })
+                    .fail(function (jqxhr, textStatus, error) {
+                        $("#feedback").append("error " + textStatus + ". " + error);
+                    });
+
+                // Incremental updating
+                $.getJSON("plots/realtimebarplot.json")
+                    .then(function (spec) {
+                        var interval = 1,
+                            accumulatedData = [];
+                        spec.selector = "#chart2";
+                        accumulatedData = [getLatestDataInteval(interval++)];
+                        spec.data[0].values = accumulatedData;
+                        plotDef = ggjs.plot(spec);
+                        rendererAcc = ggjs.renderer(plotDef);
+                        rendererAcc.render();
+
+                        // Simulate realtime data being collected
+                        // periodically
+                        setInterval(function() {
+                            var latestData = getLatestDataInteval(interval);
+                            interval++;
+                            accumulatedData.push(latestData);
+                            if (accumulatedData.length > 15) {
+                                accumulatedData.shift();
+                            }
+                            
+                            rendererAcc.plotDef().data().dataset("data").values(accumulatedData);
+                            // renderer.plotDef().data().dataset("data").values().push(latestData);
+                            rendererAcc.renderPlot();
+                            // console.log(renderer.plotDef().data().dataset("data").values())
+                            // console.log(renderer.plotDef().data().dataset("data").values())
+                            // console.log(renderer.plotDef().data())
+                            // renderer.plotDef().data().values();
+                        }, 700);
+                    })
+                    .fail(function (jqxhr, textStatus, error) {
+                        $("#feedback").append("error " + textStatus + ". " + error);
+                    });
+            });
+        </script>
+    </body>
+</html>
