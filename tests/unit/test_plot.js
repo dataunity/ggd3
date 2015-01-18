@@ -37,8 +37,8 @@ describe("Module: ggjs.Plot", function() {
 		it("should initialise the plot with default padding", function() {
 			var plot = ggjs.plot({});
 			expect(plot.padding().top()).toEqual(20);
-			expect(plot.padding().bottom()).toEqual(20);
-			expect(plot.padding().left()).toEqual(20);
+			expect(plot.padding().bottom()).toEqual(30);
+			expect(plot.padding().left()).toEqual(40);
 			expect(plot.padding().right()).toEqual(20);
 		});
 

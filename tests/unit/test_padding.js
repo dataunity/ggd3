@@ -25,8 +25,8 @@ describe("Module: ggjs.Padding", function() {
 		it("should initialise default padding", function() {
 			var padding = ggjs.padding({});
 			expect(padding.top()).toEqual(20);
-			expect(padding.bottom()).toEqual(20);
-			expect(padding.left()).toEqual(20);
+			expect(padding.bottom()).toEqual(30);
+			expect(padding.left()).toEqual(40);
 			expect(padding.right()).toEqual(20);
 		});
 

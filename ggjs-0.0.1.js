@@ -414,10 +414,10 @@ ggjs.scales = function(s) {
 ggjs.Padding = (function () {
 	var padding = function(s) {
 		this.padding = {
-			left: s.left || 20,
+			left: s.left || 40,
 			right: s.right || 20,
 			top: s.top || 20,
-			bottom: s.bottom || 20
+			bottom: s.bottom || 30
 		};
 		//if (s) ggjs.extend(this.padding, s);
 	};
