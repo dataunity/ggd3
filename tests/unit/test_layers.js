@@ -36,6 +36,17 @@ describe("Module: ggjs.Layers", function() {
 			expect(list[0].geom()).toEqual("area");
 			expect(list[1].geom()).toEqual("text");
 		});
+
+		it("should order layers by namespaced orderId", function() {
+			var layers = ggjs.layers([
+				{geom: "text", "ggjs:orderId": 2},
+				{geom: "area", "ggjs:orderId": 1}
+			]);
+			var list = layers.asArray();
+			expect(list.length).toEqual(2);
+			expect(list[0].geom()).toEqual("area");
+			expect(list[1].geom()).toEqual("text");
+		});
 	});
 
 });

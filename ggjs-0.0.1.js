@@ -562,12 +562,16 @@ ggjs.Layer = (function () {
 	// 		stat="smooth")
 	// Ref [lg] 3.1
 	var layer = function(spec) {
-		var fillAesMap, xAesMap;
+		// ToDo: move Namespace info out into separate module
+		var ggjsPrefix = "ggjs",
+			fillAesMap, xAesMap;
 		this.layer = {
 			data: spec.data || null,
 			geom: spec.geom || null,
 			position: spec.position || null,
-			orderId: spec.orderId || null,
+			// Sometimes order id is prefixed because JSON-LD context
+			// has conflicts with other vocabs using 'orderId'.
+			orderId: spec.orderId || spec[ggjsPrefix + ":orderId"] || null,
 			// Note: support 'aesmapping' as name for aesmapping collection as well
 			// as 'aesmapping' to support Linked Data style naming
 			aesmappings: ggjs.aesmappings(spec.aesmappings || spec.aesmapping || [])
