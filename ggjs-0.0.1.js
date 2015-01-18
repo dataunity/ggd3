@@ -8,6 +8,9 @@ ggjs.util = (function () {
 	var isUndefined = function (val) {
 			return typeof val === 'undefined';
 		},
+		isNullOrUndefined = function (val) {
+			return isUndefined(val) || val == null;
+		},
 		objKeys = function (obj) {
 			var keys = [],
 				key;
@@ -44,6 +47,7 @@ ggjs.util = (function () {
 
 	return {
 		isUndefined: isUndefined,
+		isNullOrUndefined: isNullOrUndefined,
 		objKeys: objKeys,
 		countObjKeys: countObjKeys,
 		deepCopy: deepCopy,
@@ -563,6 +567,7 @@ ggjs.Layer = (function () {
 			data: spec.data || null,
 			geom: spec.geom || null,
 			position: spec.position || null,
+			orderId: spec.orderId || null,
 			// Note: support 'aesmapping' as name for aesmapping collection as well
 			// as 'aesmapping' to support Linked Data style naming
 			aesmappings: ggjs.aesmappings(spec.aesmappings || spec.aesmapping || [])
@@ -603,6 +608,12 @@ ggjs.Layer = (function () {
 		return this;
 	};
 
+	prototype.orderId = function (val) {
+		if (!arguments.length) return this.layer.orderId;
+		this.layer.orderId = val;
+		return this;
+	};
+
 	prototype.aesmappings = function (val) {
 		if (!arguments.length) return this.layer.aesmappings;
 		// ToDo: should val be obj or Axes (or either)?
@@ -632,11 +643,18 @@ ggjs.layer = function(s) {
 
 ggjs.Layers = (function () {
 	var layers = function(spec) {
-		var i;
+		var isNullOrUndefined = ggjs.util.isNullOrUndefined,
+			i;
 		this.layers = [];
 		for (i = 0; i < spec.length; i++) {
 			this.layers.push(ggjs.layer(spec[i]));
 		}
+		// Sort layers by orderId
+        this.layers.sort(function (lhs, rhs) {
+            var lhsOrderId = isNullOrUndefined(lhs.orderId()) ? 0 : lhs.orderId(),
+                rhsOrderId = isNullOrUndefined(rhs.orderId()) ? 0 : rhs.orderId();
+            return lhsOrderId - rhsOrderId;
+        })
 	};
 
 	var prototype = layers.prototype;

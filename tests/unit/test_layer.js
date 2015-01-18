@@ -48,6 +48,11 @@ describe("Module: ggjs.Layer", function() {
 			var layer = ggjs.layer( {geom: "text", position: "dodge"} );
 			expect(layer.position()).toEqual("dodge");
 		});
+
+		it("should initialise the layer with orderId", function() {
+			var layer = ggjs.layer( {geom: "text", orderId: 7} );
+			expect(layer.orderId()).toEqual(7);
+		});
 	});
 
 	describe("layer info", function() {
