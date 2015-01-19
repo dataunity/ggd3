@@ -417,7 +417,7 @@ ggjs.Padding = (function () {
 			left: s.left || 40,
 			right: s.right || 20,
 			top: s.top || 20,
-			bottom: s.bottom || 30
+			bottom: s.bottom || 70
 		};
 		//if (s) ggjs.extend(this.padding, s);
 	};
@@ -1506,9 +1506,17 @@ ggjs.Renderer = (function (d3) {
 					yAxis = this.yAxis(),
 					xAxisY = plotDef.plotAreaY() + plotDef.plotAreaHeight();
 				plot.append("g")
-					.attr("class", "ggjs-x ggjs-axis")
-					.attr("transform", "translate(" + plotDef.plotAreaX() + "," + xAxisY + ")")
-					.call(xAxis);
+						.attr("class", "ggjs-x ggjs-axis")
+						.attr("transform", "translate(" + plotDef.plotAreaX() + "," + xAxisY + ")")
+						.call(xAxis)
+					// Tmp: orientate labels
+					.selectAll("text")
+						.attr("y", 5)
+						.attr("x", 4)
+						// .attr("dy", ".15em")
+						.attr("dy", "12px")
+						.attr("transform", "rotate(35)")
+						.style("text-anchor", "start");
 				// ToDo: append x axis title
 				plot.append("g")
 					.attr("class", "ggjs-y ggjs-axis")

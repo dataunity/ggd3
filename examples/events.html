@@ -66,7 +66,7 @@
         <div class="container">
             <div id="map" class="chart-panel"></div>
             <div class="results-panel">
-                <div id="map-text" class="results">Click the chart</div>
+                <div id="map-text" class="results">Hover over the chart</div>
             </div>
         </div>
         <script>
@@ -135,7 +135,7 @@
                         // ToDo: implement promises for rendering so
                         // timeout can be removed
                         setTimeout(function() {
-                            $("circle").click(function (evnt) {
+                            $("circle").mouseover(function (evnt) {
                                 var target = $(evnt.target),
                                     xField = target.data("ggjsXField"),
                                     xValue = target.data("ggjsXValue"),
