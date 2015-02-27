@@ -22,13 +22,13 @@
     "layers": [
         {
             "data": null,
-            "geom": "geotiles",
+            "geom": {"geomType": "GeomGeoTiles"},
             "stat": null,
             "posadj": null
         },
         {
             "data": "data",
-            "geom": "point",
+            "geom": {"geomType": "GeomPoint"},
             "aesmappings": [
                 {"aes": "x", "field": "LATITUDE"},
                 {"aes": "y", "field": "LONGITUDE"},

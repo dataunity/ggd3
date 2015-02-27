@@ -65,7 +65,7 @@
                                         {aes: "fill", field: "species", scaleName: "color"}
                                     ],
                                     "data": "data",
-                                    "geom": "point",
+                                    "geom": {"geomType": "GeomPoint"},
                                     "stat": null,
                                     "posadj": null
                                 }
@@ -99,7 +99,7 @@
                             "layers": [
                                 {
                                     //"data": "data",
-                                    "geom": "bar",
+                                    "geom": {"geomType": "GeomBar"},
                                     "aesmappings": [
                                         {aes: "x", field: "Product"},
                                         {aes: "y", field: "Stock"},
@@ -108,7 +108,7 @@
                                 },
                                 {
                                     //"data": "data",
-                                    "geom": "text",
+                                    "geom": {"geomType": "GeomText"},
                                     "aesmappings": [
                                         {aes: "x", field: "Product"},
                                         {aes: "y", field: "Stock"},
@@ -152,7 +152,7 @@
                                         {aes: "fill", field: "Person", scaleName: "color"}
                                     ],
                                     "data": "data",
-                                    "geom": "bar",
+                                    "geom": {"geomType": "GeomBar"},
                                     "position": "stack"
                                 }
                             ]
@@ -190,7 +190,7 @@
                                         {aes: "fill", field: "Product", scaleName: "color"}
                                     ],
                                     "data": "data",
-                                    "geom": "bar"
+                                    "geom": {"geomType": "GeomBar"}
                                 }
                             ]
                         };
@@ -222,7 +222,7 @@
                             "layers": [
                                 {
                                     "data": null,
-                                    "geom": "geotiles",
+                                    "geom": {"geomType": "GeomGeoTiles"},
                                     "stat": null,
                                     "posadj": null
                                 },
@@ -234,7 +234,7 @@
                                 // },
                                 {
                                     "data": "data",
-                                    "geom": "point",
+                                    "geom": {"geomType": "GeomPoint"},
                                     "aesmappings": [
                                         {aes: "x", field: "LATITUDE"},
                                         {aes: "y", field: "LONGITUDE"},

@@ -22,7 +22,7 @@
     ],
     "layers": [
         {
-            "geom": "point",
+            "geom": {"geomType": "GeomPoint"},
             "aesmappings": [
                 {"aes": "x", "field": "Product"},
                 {"aes": "y", "field": "Stock"}
