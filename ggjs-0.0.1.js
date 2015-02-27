@@ -251,7 +251,7 @@ ggjs.Axis = (function() {
 	return axis;
 })();
 
-ggjs.axis = function(s) {
+ggjs.axis = function (s) {
   return new ggjs.Axis(s);
 };
 
@@ -289,7 +289,7 @@ ggjs.Axes = (function() {
 	return axes;
 })();
 
-ggjs.axes = function(s) {
+ggjs.axes = function (s) {
   return new ggjs.Axes(s);
 };
 
@@ -365,7 +365,7 @@ ggjs.Scale = (function () {
 	return scale;
 })();
 
-ggjs.scale = function(s) {
+ggjs.scale = function (s) {
 	return new ggjs.Scale(s);
 };
 
@@ -402,7 +402,7 @@ ggjs.Scales = (function() {
 	return scales;
 })();
 
-ggjs.scales = function(s) {
+ggjs.scales = function (s) {
   return new ggjs.Scales(s);
 };
 
@@ -451,7 +451,7 @@ ggjs.Padding = (function () {
 	return padding;
 })();
 
-ggjs.padding = function(s) {
+ggjs.padding = function (s) {
 	return new ggjs.Padding(s);
 };
 
@@ -501,7 +501,7 @@ ggjs.AesMapping = (function () {
 	return aesmap;
 })();
 
-ggjs.aesmapping = function(s) {
+ggjs.aesmapping = function (s) {
   return new ggjs.AesMapping(s);
 };
 
@@ -540,10 +540,37 @@ ggjs.AesMappings = (function () {
 	return aesmappings;
 })();
 
-ggjs.aesmappings = function(s) {
+ggjs.aesmappings = function (s) {
   return new ggjs.AesMappings(s);
 };
 
+
+// ------------------
+// Layer Geom
+// ------------------
+
+ggjs.Geom = (function () {
+	var geom = function(s) {
+		this.geom = {
+			// Support JSON-LD type Geom type
+			geomType: s.geomType || s["@type"] || "GeomBar"
+		};
+	};
+
+	var prototype = geom.prototype;
+
+	prototype.geomType = function (l) {
+		if (!arguments.length) return this.geom.geomType;
+		this.geom.geomType = l;
+		return this;
+	};
+
+	return geom;
+})();
+
+ggjs.geom = function (s) {
+	return new ggjs.Geom(s);
+};
 
 // ------------------
 // Layers
@@ -567,7 +594,8 @@ ggjs.Layer = (function () {
 			fillAesMap, xAesMap;
 		this.layer = {
 			data: spec.data || null,
-			geom: spec.geom || null,
+			geom: ggjs.geom(spec.geom || {}),
+			// geom: spec.geom || null,
 			position: spec.position || null,
 			// Sometimes order id is prefixed because JSON-LD context
 			// has conflicts with other vocabs using 'orderId'.
@@ -582,7 +610,7 @@ ggjs.Layer = (function () {
 		xAesMap = this.layer.aesmappings.findByAes("x");
 
 		// Set defaults
-		if (this.geom() === "bar" && this.position() === "stack" &&
+		if (this.geom().geomType() === "GeomBar" && this.position() === "stack" &&
 			fillAesMap != null && xAesMap != null && 
 			fillAesMap.field() !== xAesMap.field()) {
 			this.layer.useStackedData = true;
@@ -1079,24 +1107,24 @@ ggjs.Renderer = (function (d3) {
 		for (i = 0; i < layerDefs.length; i++) {
 			layerDef = layerDefs[i];
 
-			switch (layerDef.geom()) {
-				case "point":
+			switch (layerDef.geom().geomType()) {
+				case "GeomPoint":
 					this.drawPointLayer(plotArea, layerDef);
 					break;
-				case "bar":
+				case "GeomBar":
 					this.drawBarLayer(plotArea, layerDef);
 					break;
-				case "text":
+				case "GeomText":
 					this.drawTextLayer(plotArea, layerDef);
 					break;
-				case "path":
+				case "GeomPath":
 					this.drawPathLayer(plotArea, layerDef);
 					break;
-				case "geotiles":
+				case "GeomGeoTiles":
 					this.drawMapTiles(plotArea, layerDef);
 					break;
 				default:
-					throw "Cannot draw layer, geom type not supported: " + layerDef.geom();
+					throw "Cannot draw layer, geom type not supported: " + layerDef.geom().geomType();
 			}
 		}
 

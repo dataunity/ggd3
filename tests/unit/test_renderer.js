@@ -209,7 +209,7 @@ describe("Module: ggjs.Renderer", function() {
 			                    {aes: "y", field: "y"}
 			                ],
 			                "data": "data",
-			                "geom": "point"
+			                "geom": {"geomType": "GeomPoint"}
 			            },
 			            // This layer is stacked data (stacked bar)
 			            {
@@ -219,7 +219,7 @@ describe("Module: ggjs.Renderer", function() {
 			                    {aes: "fill", field: "type"}
 			                ],
 			                "data": "data2",
-			                "geom": "bar",
+			                "geom": {"geomType": "GeomBar"},
 			                "position": "stack"
 			            }
 			        ]

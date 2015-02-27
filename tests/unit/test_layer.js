@@ -7,8 +7,8 @@ describe("Module: ggjs.Layer", function() {
 		});
 
 		it("should initialise the layer with geom", function() {
-			var layer = ggjs.layer( {geom: "text"} );
-			expect(layer.geom()).toEqual("text");
+			var layer = ggjs.layer( {geom: {geomType: "GeomText"}} );
+			expect(layer.geom().geomType()).toEqual("GeomText");
 		});
 
 		it("should initialise the layer with aesthetic mappings", function() {
@@ -45,12 +45,12 @@ describe("Module: ggjs.Layer", function() {
 		});
 
 		it("should initialise the layer with position", function() {
-			var layer = ggjs.layer( {geom: "text", position: "dodge"} );
+			var layer = ggjs.layer( {geom: {geomType: "text"}, position: "dodge"} );
 			expect(layer.position()).toEqual("dodge");
 		});
 
 		it("should initialise the layer with orderId", function() {
-			var layer = ggjs.layer( {geom: "text", orderId: 7} );
+			var layer = ggjs.layer( {geom: {geomType: "text"}, orderId: 7} );
 			expect(layer.orderId()).toEqual(7);
 		});
 	});
@@ -58,7 +58,7 @@ describe("Module: ggjs.Layer", function() {
 	describe("layer info", function() {
 		it("should identify stacked bar as needing stacked data", function() {
 			var layer = ggjs.layer({
-				geom: "bar",
+				geom: {geomType: "GeomBar"},
 				position: "stack",
 				aesmappings: [
 						{ aes: "x", field: "field1" },

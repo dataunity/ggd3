@@ -37,7 +37,7 @@ describe("Module: ggjs.Plot", function() {
 		it("should initialise the plot with default padding", function() {
 			var plot = ggjs.plot({});
 			expect(plot.padding().top()).toEqual(20);
-			expect(plot.padding().bottom()).toEqual(30);
+			expect(plot.padding().bottom()).toEqual(70);
 			expect(plot.padding().left()).toEqual(40);
 			expect(plot.padding().right()).toEqual(20);
 		});
@@ -118,12 +118,12 @@ describe("Module: ggjs.Plot", function() {
 			var plot = ggjs.plot({
 				layers: [
 					{
-						geom: "text"
+						geom: {geomType: "text"}
 					}
 				]
 			});
 			expect(plot.layers().count()).toEqual(1);
-			expect(plot.layers().asArray()[0].geom()).toEqual("text");
+			expect(plot.layers().asArray()[0].geom().geomType()).toEqual("text");
 		});
 	});
 
