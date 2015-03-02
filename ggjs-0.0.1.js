@@ -1070,6 +1070,7 @@ ggjs.Renderer = (function (d3) {
 		this.drawAxes();
 		this.drawLayers();
 		
+		this.drawLegends();
 	};
 
 	prototype.drawLayers = function () {
@@ -1861,6 +1862,174 @@ ggjs.Renderer = (function (d3) {
 		}
 
 		return scale;
+	};
+
+	// Legends
+	function scaleLegend () {
+		// Legend attributes
+
+		// Scale
+		var _scale = null,
+			_itemOffsetY = 5;	// The gap between items
+
+		// Legend function.
+		function legend (selection) {
+			selection.each(function (data) {
+				var legendContainer = d3.select(this);
+
+				legendContainer.selectAll(".ggjs-legend-marker")
+						.data(data)
+					.enter().append("circle")
+						.attr("class", "ggjs-legend-marker")
+						.attr("r", 5)
+						// .attr("cx", 5)
+						// .attr("cy", 5);
+						.attr("cx", 5)
+						.attr("cy", function (d, i) { return +i * _itemOffsetY; })
+						.style("fill", function (d) { return _scale(d); });
+
+				legendContainer.selectAll(".ggjs-legend-marker-label")
+						.data(data)
+					.enter().append("text")
+						.attr("class", "ggjs-legend-marker-label")
+						.attr("x", 15)
+						.attr("y", function (d, i) { return +i * _itemOffsetY; })
+						.text(function (d) { return d; });
+
+				// Add the label 'Legend' on enter
+				// containerDiv.selectAll('b')
+				// 	.data([data])
+				// 	.enter().append('b')
+				// 	.text('Legend');
+			});
+		}
+
+		// Accessor methods
+
+		// Scale accessor
+		legend.scale = function (value) {
+			if (!arguments.length) { return _scale; }
+			_scale = value;
+			return legend;
+		};
+
+		// Y offset accessor
+		legend.itemOffsetY = function (value) {
+			if (!arguments.length) { return _itemOffsetY; }
+			_itemOffsetY = value;
+			return legend;
+		};
+
+		return legend;
+	}
+
+	prototype.drawLegends = function () {
+		// ToDo: find the legends for all aes across all layers
+
+		// ToDo: combine aes if possible, like fill and shape
+		// Find rules to combine legends - e.g. if same fields
+		// are used for different aes, then legends can be combined.
+		// E.g. if 'country' field is used for aes 'shape' and 'fill'
+		// then draw a single legend for 'country' values adapting 
+		// the fill and shape of the markers
+		var plotDef = this.plotDef(),
+			plot = this.renderer.plot,
+			layerDefs = plotDef.layers().asArray(),
+			legendX = 0,	// Cummalative legend offset 
+			legendY = 0,	// Cummalative legend offset 
+			itemOffsetY = 12,		// gap between legend items
+			titleHeight = 12,	// Height of legend title
+			i, j, layerDef, legendArea, legendBaseX, legendBaseY, 
+			scaleNamesLookup = {},
+			scaleNamesToDisplay = [],
+			legendX, legendY, legendData, aesmappings, aesmapping, aes, scaleName, scale;
+
+		// ToDo: legend position
+		switch ("ToDo: legend position") {
+			// case "top":
+			// case "bottom":
+			// case "left":
+			// case "right":
+			default:
+				legendBaseX = plotDef.plotAreaX() + (0.7 * plotDef.plotAreaWidth())
+				legendArea = plot.append("g")
+					.attr("transform", "translate(" + legendBaseX + "," + plotDef.plotAreaY() + ")");
+				break;
+		}
+
+		// Look for scales to turn into legends
+		for (i = 0; i < layerDefs.length; i++) {
+			layerDef = layerDefs[i];
+			aesmappings = layerDef.aesmappings().asArray();
+
+			console.log("aesmappings", aesmappings)
+			if (aesmappings) {
+				for (j = 0; j < aesmappings.length; j++) {
+					aesmapping = aesmappings[j];
+					console.log(aesmapping)
+					aes = aesmapping.aes();
+					// Skip aesthetics which are already display as axis
+					if (aes === "x" || aes === "y") {
+						continue;
+					}
+					scaleName = aesmapping.scaleName();
+					console.log("aesmapping", aes, scaleName);
+					if (scaleName != null && typeof scaleNamesLookup[scaleName] === 'undefined') {
+						scaleNamesToDisplay.push(scaleName);
+						scaleNamesLookup[scaleName] = true;
+					}
+				}
+			}
+			
+			// Demo data:
+			legendData = ["a", "b", "c"];
+
+			scale = d3.scale.category20();
+			scale.domain(legendData);
+
+			var lgnd = scaleLegend()
+				.itemOffsetY(itemOffsetY)
+				.scale(scale);
+
+			legend = legendArea.append("g")
+				.attr("transform", "translate(0," + legendY + ")")
+				.attr("class", "legend")
+				.data([legendData])
+				// .attr("transform","translate(50,30)")
+				.style("font-size","12px")
+				.call(lgnd);
+
+			// Set up offsets for next legend collection
+			legendY += titleHeight + legendData.length * itemOffsetY;
+		}
+
+		for (i = 0; i < scaleNamesToDisplay.length; i++) {
+			// ToDo: check type of scale
+			//   if ordinal: when setting up plot find the domain values
+			//   		then look them up here
+			//   if quan: display box with range of values (gradient?)
+			legendData = ["a", "b", "c"];
+			console.log("scale: ", scaleNamesToDisplay[i]);
+			// find the scale
+			scale = d3.scale.category20();
+			scale.domain(legendData);
+
+			var lgnd = scaleLegend()
+				.itemOffsetY(itemOffsetY)
+				.scale(scale);
+
+			legend = legendArea.append("g")
+				.attr("transform", "translate(0," + legendY + ")")
+				.attr("class", "legend")
+				.data([legendData])
+				// .attr("transform","translate(50,30)")
+				.style("font-size","12px")
+				.call(lgnd);
+
+			// Set up offsets for next legend collection
+			legendY += titleHeight + legendData.length * itemOffsetY;
+		}
+
 	};
 
 	return renderer;
