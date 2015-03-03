@@ -880,6 +880,7 @@ ggjs.Renderer = (function (d3) {
 			plot: null,	// The element to draw to
 			xAxis: null,
 			yAxis: null,
+			scaleNameToD3Scale: {},	// Lookup to find D3 scale for scale name
 			datasetsRetrieved: {},
 			warnings: [],
 			defaultFillColor: "rgb(31, 119, 180)"
@@ -1063,6 +1064,7 @@ ggjs.Renderer = (function (d3) {
 
 		// ToDo: if no domain set on axes, default to extent
 		// of data for appropriate aes across layers
+		this.buildScales();
 		this.setupXAxis();
 		this.setupYAxis();
 		this.setupGeo();
@@ -1681,6 +1683,45 @@ ggjs.Renderer = (function (d3) {
 		return tmpStat;
 	}
 
+	prototype.allValuesForLayer = function (layer, aesmap) {
+		// Gets all data values for an aes in a layer
+		var plotDef = this.plotDef(),
+			values = [],
+			//tmpVals, 
+			i, field,
+			datasetName, dataset;
+
+		// Layer data
+		datasetName = layer.data();
+		if (!datasetName) {
+			datasetName = plotDef.defaultDatasetName();
+		}
+		dataset = this.getDataset(datasetName);
+		if (dataset == null) {
+			throw "Unable to find dataset with name " + datasetName;
+		}
+
+		if (aesmap) {
+			field = aesmap.field();
+			
+			if (dataset.values().map) {
+				values = dataset.values().map(function (d) { return d[field]; });
+			} else {
+				// backup way to get values from data
+				// ToDo: use array.map polyfill so this can be removed?
+				var dsVals = dataset.values(),
+					j;
+				this.warning("Old browser - doesn't support array.map");
+				for (j = 0; j < dsVals.length; j++) {
+					values.push(dsVals[j][field]);
+				}
+			}
+			// values = d3.merge([ values, tmpVals ]);
+		}
+
+		return values;
+	};
+
 	prototype.allValuesAcrossLayers = function (aes) {
 		// Looks at the data across all layers for an
 		// aesthetic and gets all it's values
@@ -1694,38 +1735,143 @@ ggjs.Renderer = (function (d3) {
 			layer = layers[i];
 			aesmap = layer.aesmappings().findByAes(aes);
 
-			// Layer data
-			datasetName = layer.data();
-			if (!datasetName) {
-				datasetName = plotDef.defaultDatasetName();
-			}
-			//dataset = plotDef.data().dataset(datasetName);
-			dataset = this.getDataset(datasetName);
-			if (dataset == null) {
-				throw "Unable to find dataset with name " + datasetName;
-			}
+			tmpVals = this.allValuesForLayer(layer, aesmap);
+			values = d3.merge([ values, tmpVals ]);
 
-			if (aesmap) {
-				field = aesmap.field();
+			// // Layer data
+			// datasetName = layer.data();
+			// if (!datasetName) {
+			// 	datasetName = plotDef.defaultDatasetName();
+			// }
+			// //dataset = plotDef.data().dataset(datasetName);
+			// dataset = this.getDataset(datasetName);
+			// if (dataset == null) {
+			// 	throw "Unable to find dataset with name " + datasetName;
+			// }
+
+			// if (aesmap) {
+			// 	field = aesmap.field();
 				
-				if (dataset.values().map) {
-					tmpVals = dataset.values().map(function (d) { return d[field]; });
-				} else {
-					// backup way to get values from data
-					// ToDo: use array.map polyfill so this can be removed?
-					var tmpVals = [],
-						dsVals = dataset.values(),
-						j;
-					this.warning("Old browser - doesn't support array.map");
-					for (j = 0; j < dsVals.length; j++) {
-						tmpVals.push(dsVals[j][field]);
-					}
-				}
-				values = d3.merge([ values, tmpVals ]);
-			}
+			// 	if (dataset.values().map) {
+			// 		tmpVals = dataset.values().map(function (d) { return d[field]; });
+			// 	} else {
+			// 		// backup way to get values from data
+			// 		// ToDo: use array.map polyfill so this can be removed?
+			// 		var tmpVals = [],
+			// 			dsVals = dataset.values(),
+			// 			j;
+			// 		this.warning("Old browser - doesn't support array.map");
+			// 		for (j = 0; j < dsVals.length; j++) {
+			// 			tmpVals.push(dsVals[j][field]);
+			// 		}
+			// 	}
+			// 	values = d3.merge([ values, tmpVals ]);
+			// }
 		}
 
 		return values;
+	};
+
+
+	// -------
+	// Scales
+	// -------
+
+	// Build the scales based on data
+	prototype.buildScales = function () {
+		var plotDef = this.plotDef(),
+			plot = this.renderer.plot,
+			layerDefs = plotDef.layers().asArray(),
+			i, j, layerDef,
+			// scaleNamesLookup = {},
+			// scaleNames = [],
+			scaleNameToLayerInfos = {},
+			// scaleNameToLayer = {},
+			// scaleNameToAesMap = {},
+			scaleDef,
+			layerInfo,
+			layerInfos,
+			layerDef,
+			tmpScale,
+			values,
+			tmpVals,
+			aesmappings, aesmapping, aes, scaleName, scale;
+
+		// Find names of all the scales used
+		for (i = 0; i < layerDefs.length; i++) {
+			layerDef = layerDefs[i];
+			aesmappings = layerDef.aesmappings().asArray();
+
+			console.log("aesmappings", aesmappings)
+			if (aesmappings) {
+				for (j = 0; j < aesmappings.length; j++) {
+					aesmapping = aesmappings[j];
+					console.log(aesmapping)
+					aes = aesmapping.aes();
+					// Skip aesthetics which are already display as axis
+					// if (aes === "x" || aes === "y") {
+					// 	continue;
+					// }
+					scaleName = aesmapping.scaleName();
+					if (scaleName == null) {
+						continue;
+					}
+					// Store the information about where scale is used
+					layerInfo = {
+						layerDef: layerDef,
+						aesmapping: aesmapping
+					};
+					if (typeof scaleNameToLayerInfos[scaleName] === 'undefined') {
+						scaleNameToLayerInfos[scaleName] = [layerInfo];
+					} else {
+						scaleNameToLayerInfos[scaleName].push(layerInfo);
+					}
+					
+					// scaleNameToLayer[scaleName] = layer;
+					// scaleNameToAesMap[scaleName] = aesmapping;
+					// console.log("aesmapping", aes, scaleName);
+					// if (scaleName != null && typeof scaleNamesLookup[scaleName] === 'undefined') {
+					// 	scaleNames.push(scaleName);
+					// 	scaleNamesLookup[scaleName] = true;
+					// }
+				}
+			}
+		}
+
+		// Create a D3 scale for each scale
+		console.log("Creating d3 scales")
+		for (scaleName in scaleNameToLayerInfos) {
+			scaleDef = plotDef.scales().scale(scaleName);
+			scale = this.scale(scaleDef);
+			if (scaleDef.hasDomain()) {
+				scale.domain(scaleDef.domain());
+			} else {
+				// If scale domain hasn't been set, use data to find it
+				if (scaleDef.isQuantitative()) {
+					max = this.statAcrossLayers(aes, "max");
+					if (!isNaN(max)) {
+						scale.domain([0, max]).nice();
+					}
+				} else if (scaleDef.isOrdinal()) {
+					// Find values across all layers
+					layerInfos = scaleNameToLayerInfos[scaleName];
+					values = [];
+					console.log("scaleName", scaleName)
+					for (i = 0; i < layerInfos.length; i++) {
+						layerInfo = layerInfos[i];
+						layerDef = layerInfo.layerDef;
+						aesmapping = layerInfo.aesmapping;
+						// ToDo: cache values for layer/field combos
+						console.log("layer info", scaleName, layerDef.data(), aesmapping.aes(), aesmapping.field());
+						tmpVals = this.allValuesForLayer(layerDef, aesmapping);
+						values = d3.merge([ values, tmpVals ]);
+					}
+					scale.domain(values);
+				}
+			}
+			
+			this.renderer.scaleNameToD3Scale[scaleName] = scale;
+		}
 	};
 
 	prototype.setupAxisScale = function (aes, scale, scaleDef) {
