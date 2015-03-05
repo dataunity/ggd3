@@ -910,22 +910,41 @@ ggjs.Renderer = (function (d3) {
 
 	var prototype = renderer.prototype;
 
+	// ----------
+	// Accessors
+	// ----------
+
 	prototype.plotDef = function (val) {
 		if (!arguments.length) return this.renderer.plotDef;
 		this.renderer.plotDef = val;
 		return this;
 	};
 
-	prototype.warning = function (warning) {
-		// Adds a warning to the log
-		this.renderer.warnings.push(warning);
-	}
+	prototype.d3Scale = function (scaleName, val) {
+		if (!arguments.length) {
+			throw "Must supply args when getting/setting d3 scale"
+		}
+		else if (arguments.length === 1) {
+			return this.renderer.scaleNameToD3Scale[scaleName];
+		} else {
+			this.renderer.scaleNameToD3Scale[scaleName] = val;
+		}
+		
+		return this;
+	};
 
 	prototype.warnings = function (val) {
 		if (!arguments.length) return this.renderer.warnings;
 		this.renderer.warnings = val;
 		return this;
 	};
+
+	// End Accessors
+
+	prototype.warning = function (warning) {
+		// Adds a warning to the log
+		this.renderer.warnings.push(warning);
+	}
 
 	prototype.render = function () {
 		var this_ = this;
@@ -1511,14 +1530,24 @@ ggjs.Renderer = (function (d3) {
 		if (fillAesMap != null) {
 			var colorField = fillAesMap.field(),
 				colorScaleDef = this.scaleDef(fillAesMap.scaleName()),
+				scaleName = fillAesMap.scaleName(),
 				colorScale;
-			if (colorScaleDef == null) {
+			// if (colorScaleDef == null) {
+			// 	this.warning("Couldn't set colour on layer - fill colour scale missing.")
+			// 	svgItems.style("fill", function(d) { return defaultFillColor; });
+			// } else {
+			// 	colorScale = this.scale(colorScaleDef);
+			// 	svgItems.style("fill", function(d) { return colorScale(d[colorField]); });
+			// }
+			
+			if (scaleName == null) {
 				this.warning("Couldn't set colour on layer - fill colour scale missing.")
 				svgItems.style("fill", function(d) { return defaultFillColor; });
 			} else {
-				colorScale = this.scale(colorScaleDef);
+				colorScale = this.d3Scale(scaleName);
+				console.log("Using d3 scale", scaleName, colorScale.domain())
 				svgItems.style("fill", function(d) { return colorScale(d[colorField]); });
-			}			
+			}	
 		} else {
 			svgItems.style("fill", function(d) { return defaultFillColor; });
 		}
@@ -1802,11 +1831,11 @@ ggjs.Renderer = (function (d3) {
 			layerDef = layerDefs[i];
 			aesmappings = layerDef.aesmappings().asArray();
 
-			console.log("aesmappings", aesmappings)
+			// console.log("aesmappings", aesmappings)
 			if (aesmappings) {
 				for (j = 0; j < aesmappings.length; j++) {
 					aesmapping = aesmappings[j];
-					console.log(aesmapping)
+					// console.log(aesmapping)
 					aes = aesmapping.aes();
 					// Skip aesthetics which are already display as axis
 					// if (aes === "x" || aes === "y") {
@@ -1839,7 +1868,7 @@ ggjs.Renderer = (function (d3) {
 		}
 
 		// Create a D3 scale for each scale
-		console.log("Creating d3 scales")
+		// console.log("Creating d3 scales")
 		for (scaleName in scaleNameToLayerInfos) {
 			scaleDef = plotDef.scales().scale(scaleName);
 			scale = this.scale(scaleDef);
@@ -1856,13 +1885,13 @@ ggjs.Renderer = (function (d3) {
 					// Find values across all layers
 					layerInfos = scaleNameToLayerInfos[scaleName];
 					values = [];
-					console.log("scaleName", scaleName)
+					// console.log("scaleName", scaleName)
 					for (i = 0; i < layerInfos.length; i++) {
 						layerInfo = layerInfos[i];
 						layerDef = layerInfo.layerDef;
 						aesmapping = layerInfo.aesmapping;
 						// ToDo: cache values for layer/field combos
-						console.log("layer info", scaleName, layerDef.data(), aesmapping.aes(), aesmapping.field());
+						// console.log("layer info", scaleName, layerDef.data(), aesmapping.aes(), aesmapping.field());
 						tmpVals = this.allValuesForLayer(layerDef, aesmapping);
 						values = d3.merge([ values, tmpVals ]);
 					}
@@ -1870,7 +1899,7 @@ ggjs.Renderer = (function (d3) {
 				}
 			}
 			
-			this.renderer.scaleNameToD3Scale[scaleName] = scale;
+			this.d3Scale(scaleName, scale);
 		}
 	};
 
@@ -2010,36 +2039,45 @@ ggjs.Renderer = (function (d3) {
 		return scale;
 	};
 
+
+	// --------
 	// Legends
+	// --------
+
 	function scaleLegend () {
 		// Legend attributes
 
 		// Scale
 		var _scale = null,
-			_itemOffsetY = 5;	// The gap between items
+			_layout = "horizontal",
+			_itemOffsetX = 0,	// Horizontal gap between items
+			_itemOffsetY = 10,	// Vertical gap between items
+			_itemRadius = Math.floor(_itemOffsetY / 2)
+			_itemMarkerLabelGap = 10;
 
 		// Legend function.
 		function legend (selection) {
 			selection.each(function (data) {
 				var legendContainer = d3.select(this);
 
-				legendContainer.selectAll(".ggjs-legend-marker")
+				legendContainer.selectAll(".ggjs-legend-item-marker")
 						.data(data)
 					.enter().append("circle")
-						.attr("class", "ggjs-legend-marker")
-						.attr("r", 5)
-						// .attr("cx", 5)
-						// .attr("cy", 5);
-						.attr("cx", 5)
-						.attr("cy", function (d, i) { return +i * _itemOffsetY; })
-						.style("fill", function (d) { return _scale(d); });
+						.attr("class", "ggjs-legend-item-marker")
+						.attr("r", _itemRadius)
+						// .attr("cx", 0)
+						// .attr("cy", 0)
+						.attr("cx", function (d, i) { return (i * _itemOffsetX) - _itemRadius; })
+						.attr("cy", function (d, i) { return (i * _itemOffsetY) - _itemRadius; })
+						.style("fill", function (d) { return _scale(d); })
+						.style("stroke", "black");
 
-				legendContainer.selectAll(".ggjs-legend-marker-label")
+				legendContainer.selectAll(".ggjs-legend-item-label")
 						.data(data)
 					.enter().append("text")
-						.attr("class", "ggjs-legend-marker-label")
-						.attr("x", 15)
-						.attr("y", function (d, i) { return +i * _itemOffsetY; })
+						.attr("class", "ggjs-legend-item-label")
+						.attr("x", function (d, i) { return (i * _itemOffsetX) + _itemMarkerLabelGap; })
+						.attr("y", function (d, i) { return i * _itemOffsetY; })
 						.text(function (d) { return d; });
 
 				// Add the label 'Legend' on enter
@@ -2060,9 +2098,23 @@ ggjs.Renderer = (function (d3) {
 		};
 
 		// Y offset accessor
+		legend.itemOffsetX = function (value) {
+			if (!arguments.length) { return _itemOffsetX; }
+			_itemOffsetX = value;
+			return legend;
+		};
+
+		// Y offset accessor
 		legend.itemOffsetY = function (value) {
 			if (!arguments.length) { return _itemOffsetY; }
 			_itemOffsetY = value;
+			return legend;
+		};
+
+		// Radius accessor
+		legend.itemRadius = function (value) {
+			if (!arguments.length) { return _itemRadius; }
+			_itemRadius = value;
 			return legend;
 		};
 
@@ -2083,7 +2135,9 @@ ggjs.Renderer = (function (d3) {
 			layerDefs = plotDef.layers().asArray(),
 			legendX = 0,	// Cummalative legend offset 
 			legendY = 0,	// Cummalative legend offset 
-			itemOffsetY = 12,		// gap between legend items
+			itemOffsetX = 0,	// Horizontal gap between legend items
+			itemOffsetY = 18,	// Vertical gap between legend items
+			itemRadius = 5,	// Radius of circle markers
 			titleHeight = 12,	// Height of legend title
 			i, j, layerDef, legendArea, legendBaseX, legendBaseY, 
 			scaleNamesLookup = {},
@@ -2091,12 +2145,20 @@ ggjs.Renderer = (function (d3) {
 			legendX, legendY, legendData, aesmappings, aesmapping, aes, scaleName, scale;
 
 		// ToDo: legend position
-		switch ("ToDo: legend position") {
-			// case "top":
+		switch ("top") {
+			case "top":
+				itemOffsetX = 100,
+				itemOffsetY = 0,
+				legendBaseX = Math.max(0, plotDef.plotAreaX() - itemOffsetY);
+				legendArea = plot.append("g")
+					.attr("transform", "translate(" + legendBaseX + "," + plotDef.plotAreaY() + ")");
+				break;
 			// case "bottom":
 			// case "left":
-			// case "right":
+			case "right":
 			default:
+				itemOffsetX = 0,
+				itemOffsetY = 18,
 				legendBaseX = plotDef.plotAreaX() + (0.7 * plotDef.plotAreaWidth())
 				legendArea = plot.append("g")
 					.attr("transform", "translate(" + legendBaseX + "," + plotDef.plotAreaY() + ")");
@@ -2108,45 +2170,24 @@ ggjs.Renderer = (function (d3) {
 			layerDef = layerDefs[i];
 			aesmappings = layerDef.aesmappings().asArray();
 
-			console.log("aesmappings", aesmappings)
+			// console.log("aesmappings", aesmappings)
 			if (aesmappings) {
 				for (j = 0; j < aesmappings.length; j++) {
 					aesmapping = aesmappings[j];
-					console.log(aesmapping)
+					// console.log(aesmapping)
 					aes = aesmapping.aes();
 					// Skip aesthetics which are already display as axis
 					if (aes === "x" || aes === "y") {
 						continue;
 					}
 					scaleName = aesmapping.scaleName();
-					console.log("aesmapping", aes, scaleName);
+					// console.log("aesmapping", aes, scaleName);
 					if (scaleName != null && typeof scaleNamesLookup[scaleName] === 'undefined') {
 						scaleNamesToDisplay.push(scaleName);
 						scaleNamesLookup[scaleName] = true;
 					}
 				}
 			}
-			
-			// Demo data:
-			legendData = ["a", "b", "c"];
-
-			scale = d3.scale.category20();
-			scale.domain(legendData);
-
-			var lgnd = scaleLegend()
-				.itemOffsetY(itemOffsetY)
-				.scale(scale);
-
-			legend = legendArea.append("g")
-				.attr("transform", "translate(0," + legendY + ")")
-				.attr("class", "legend")
-				.data([legendData])
-				// .attr("transform","translate(50,30)")
-				.style("font-size","12px")
-				.call(lgnd);
-
-			// Set up offsets for next legend collection
-			legendY += titleHeight + legendData.length * itemOffsetY;
 		}
 
 		for (i = 0; i < scaleNamesToDisplay.length; i++) {
@@ -2154,14 +2195,19 @@ ggjs.Renderer = (function (d3) {
 			//   if ordinal: when setting up plot find the domain values
 			//   		then look them up here
 			//   if quan: display box with range of values (gradient?)
-			legendData = ["a", "b", "c"];
-			console.log("scale: ", scaleNamesToDisplay[i]);
+			scaleName = scaleNamesToDisplay[i];
+			scale = this.d3Scale(scaleName);
+			legendData = scale.domain();
+			// legendData = ["a", "b", "c"];
+			// console.log("scale: ", scaleNamesToDisplay[i]);
 			// find the scale
-			scale = d3.scale.category20();
-			scale.domain(legendData);
+			// scale = d3.scale.category20();
+			// scale.domain(legendData);
 
 			var lgnd = scaleLegend()
+				.itemOffsetX(itemOffsetX)
 				.itemOffsetY(itemOffsetY)
+				.itemRadius(itemRadius)
 				.scale(scale);
 
 			legend = legendArea.append("g")
