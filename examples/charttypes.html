@@ -28,12 +28,52 @@
                 <option value="stackedbar">Stacked Bar</option>
                 <option value="coxcomb">Coxcomb</option>
                 <option value="map">Map</option>
+                <option value="timeseries">Time Series</option>
             </select>
         </div>
         <div id="chart"></div>
         <script>
             function chartSpec (chartType) {
                 switch (chartType) {
+                    case "timeseries":
+                        return {
+                            "selector": "#chart",
+                            "coord": "cartesian",
+                            // "width": 500,
+                            "height": 400,
+                            // "padding": {"left":30, "top":10, "bottom":30, "right":10},
+                            "data": [
+                                {
+                                    "name": "data",
+                                    "url": "data/timeseries.csv",
+                                    "contentType": "text/csv",
+                                    "dataTypes": {"Time1": "number", "Sensor1": "number"}
+                                    // "dataTypes": {"Time": "date", "Sensor1": "number"}
+                                }
+                            ],
+                            "scales": [
+                                {"name": "x", "type": "linear"},
+                                // {"name": "x", "type": "time"},
+                                {"name": "y", "type": "linear"},
+                                {"name": "color", "type": "category10"},
+                            ],
+                            "axes": [
+                                {"type": "x", "scaleName": "x"},
+                                {"type": "y", "scaleName": "y"}
+                            ],
+                            "layers": [
+                                {
+                                    "aesmappings": [
+                                        {aes: "x", field: "Time1"},
+                                        {aes: "y", field: "Sensor1"}
+                                    ],
+                                    "data": "data",
+                                    "geom": {"geomType": "GeomLine"},
+                                    "stat": null
+                                }
+                            ]
+                        };
+                        break;
                     case "scatterplot":
                         return {
                             "selector": "#chart",
@@ -277,7 +317,7 @@
                 });
             });
 
-            drawChart("bar");
+            drawChart("timeseries");
         </script>
     </body>
 </html>

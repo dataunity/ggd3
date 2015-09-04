@@ -78,5 +78,18 @@ describe("Module: ggjs.Dataset", function() {
 			expect(dataset.values()[1]["isAThing"]).toBe(false);
 		});
 
+		it("should apply data type coercion to date", function() {
+			var dataset = ggjs.dataset({
+				name: "x1", 
+				dataTypes: {"x": "date"},
+				values: [
+					{"x": "2015-01-01"}, 
+					{"x": "2015-01-31"} ]
+			});
+			dataset.applyDataTypes();
+			expect(dataset.values()[0]["x"]).toEqual(new DateTime(2015, 0, 1));
+			expect(dataset.values()[1]["x"]).toEqual(new DateTime(2015, 0, 31));
+		});
+
 	});
 });

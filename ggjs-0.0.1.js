@@ -160,6 +160,14 @@ ggjs.Dataset = (function() {
 						}
 					}
 					break;
+				case "date":
+					for (i = 0; i < values.length; i++) {
+						val = values[i][fieldName];
+						if (!isUndefined(val)) {
+							values[i][fieldName] = Date.parse(val);
+						}
+					}
+					break;
 				default:
 					throw "Can't apply data type, unrecognised data type " + dataType;
 			}
@@ -1139,6 +1147,9 @@ ggjs.Renderer = (function (d3) {
 				case "GeomText":
 					this.drawTextLayer(plotArea, layerDef);
 					break;
+				case "GeomLine":
+					this.drawLineLayer(plotArea, layerDef);
+					break;
 				case "GeomPath":
 					this.drawPathLayer(plotArea, layerDef);
 					break;
@@ -1204,6 +1215,86 @@ ggjs.Renderer = (function (d3) {
 		//zoomed();
 	};
 
+	prototype.drawLineLayer = function (plotArea, layerDef) {
+		// Draws lines onto the plot area. 
+		// Lines are drawn in x axis order. See Path for drawing lines
+		// in data order
+		var plotDef = this.plotDef(),
+			aesmappings = layerDef.aesmappings(),
+			// fillAesMap = aesmappings.findByAes("fill"),
+			xField = aesmappings.findByAes("x").field(),
+			yField = aesmappings.findByAes("y").field(),
+			xScale = this.xAxis().scale(),
+			yScale = this.yAxis().scale(),
+			datasetName = layerDef.data(),
+			dataset = this.getDataset(datasetName),
+			lines, values;
+
+		values = dataset.values();
+
+		// ToDo: values need to be ordered by x axis before drawing (see Table 4.2
+		//   in GGPlot2 book)
+
+		switch (plotDef.coord()) {
+			case "cartesian":
+				lines = this.drawCartesianLineLayer(plotArea, values, xField, yField, xScale, yScale);
+				break;
+			default:
+				throw "Don't know how to draw lines for co-ordinate system " + plotDef.coord();
+		}
+
+		// ToDo: apply line colour
+		// this.applyFillColour(lines, aesmappings);
+		
+	};
+
+	prototype.drawCartesianLineLayer = function (plotArea, values, xField, yField, xScale, yScale) {
+		var line, lines;
+		console.log(values)
+		console.log(xScale)
+		console.log(values[0][xField])
+		// console.log(Date.parse(values[0][xField]))
+		// console.log(xScale(Date.parse(values[0][xField])))
+		console.log(xScale(values[0][xField]))
+		line = d3.svg.line()
+				.x(function (d) { console.log(xScale(d[xField])); return xScale(d[xField]); })
+				.y(function (d) { console.log(yScale(d[yField])); return yScale(d[yField]); });
+		console.log(line)
+		console.log(line({Sensor1: 5.3, Time: 1420070400000}))
+			// lines = plotArea.selectAll("path.ggjs-lines")
+			// 	.data(values)
+			// .enter().append("path")
+			// 	.attr("class", "ggjs-lines")
+			// 	.attr("d", function (d) { return line(d); })
+			// 	.style("stroke", "black");
+		// ToDo: work out how to support line series (current values is
+		//	put in an array to make the line function work). Needs to 
+		//  work with series legend
+		lines = plotArea.selectAll("path.line")
+					.data([values])
+				.enter()
+					.append("path")
+					.attr("class", "line")
+					.attr("d", line)
+					.style("fill", "none")
+					.style("stroke", "black")
+					.style("stroke-width", "5");
+					// .attr("d", function (d) { 
+					// 	var results;	
+					// 	// console.log(d); 
+					// 	// console.log(xScale(d[xField]));
+					// 	// console.log(yScale(d[yField]));
+					// 	try {
+					// 		results = line(d);
+					// 	} catch (e) {
+					// 		console.log("Prob")
+					// 	}
+					// 	//console.log(results)
+						
+					// 	return results; });
+		return lines;
+	};
+
 	prototype.drawPathLayer = function (plotArea, layerDef) {
 		var plotDef = this.plotDef();
 
@@ -1214,7 +1305,7 @@ ggjs.Renderer = (function (d3) {
 			default:
 				throw "Do not know how to draw path for coord " + plotDef.coord();
 		}
-	}
+	};
 
 	prototype.drawMapPathLayer = function (plotArea, layerDef) {
 		// Draws path on a map plot
@@ -1824,6 +1915,7 @@ ggjs.Renderer = (function (d3) {
 			tmpScale,
 			values,
 			tmpVals,
+			min, max,
 			aesmappings, aesmapping, aes, scaleName, scale;
 
 		// Find names of all the scales used
@@ -1896,6 +1988,16 @@ ggjs.Renderer = (function (d3) {
 						values = d3.merge([ values, tmpVals ]);
 					}
 					scale.domain(values);
+				} else if (scaleDef.isTime()) {
+					// min = this.statAcrossLayers(aes, "min");
+					// max = this.statAcrossLayers(aes, "max");
+					// if (!isNaN(max)) {
+					// 	scale.domain([0, max]).nice();
+					// }
+					console.log("setting time scale domain")
+					min = new Date(2014);
+					max = new Date(2016);
+					scale.domain([min, max]).nice();
 				}
 			}
 			
@@ -1922,6 +2024,16 @@ ggjs.Renderer = (function (d3) {
 				allValues = this.allValuesAcrossLayers(aes);
 				scale.domain(allValues);
 				//scale.domain(data.map(function(d) { return d.letter; }));
+			} else if (scaleDef.isTime()) {
+				// min = this.statAcrossLayers(aes, "min");
+				// max = this.statAcrossLayers(aes, "max");
+				// if (!isNaN(max)) {
+				// 	scale.domain([0, max]).nice();
+				// }
+				console.log("setting time scale domain")
+				min = new Date(2014);
+				max = new Date(2016);
+				scale.domain([min, max]).nice();
 			}
 		}
 		
