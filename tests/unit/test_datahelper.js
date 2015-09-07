@@ -131,4 +131,40 @@ describe("Module: ggjs.dataHelper", function() {
 			expect(max).toBe(18);
 		});
 	});
+
+	describe("sorting datatable", function() {
+		var dataHelper = ggjs.dataHelper;
+
+		it("should sort datatable by number", function() {
+			var datatable = [
+				{ "x": "c", "y": 3},
+				{ "x": "a", "y": 1},
+				{ "x": "d", "y": 4},
+				{ "x": "b", "y": 2}
+			];
+			var results = dataHelper.sortDatatable(datatable, "y");
+			expect(results).toEqual([
+				{ "x": "a", "y": 1},
+				{ "x": "b", "y": 2},
+				{ "x": "c", "y": 3},
+				{ "x": "d", "y": 4}
+			]);
+		});
+
+		it("should sort datatable by letter", function() {
+			var datatable = [
+				{ "x": "c", "y": 3},
+				{ "x": "a", "y": 1},
+				{ "x": "d", "y": 4},
+				{ "x": "b", "y": 2}
+			];
+			var results = dataHelper.sortDatatable(datatable, "x");
+			expect(results).toEqual([
+				{ "x": "a", "y": 1},
+				{ "x": "b", "y": 2},
+				{ "x": "c", "y": 3},
+				{ "x": "d", "y": 4}
+			]);
+		});
+	});
 });

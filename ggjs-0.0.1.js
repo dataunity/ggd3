@@ -85,7 +85,7 @@ ggjs.util.array = (function () {
 ggjs.Dataset = (function() {
 	var dataset = function(spec) {
 		spec = spec || {};
-		if (ggjs.util.isUndefined(spec.name)) throw "The dataset name must be defined";
+		if (ggjs.util.isUndefined(spec.name)) throw new Error("The dataset name must be defined");
 		this.dataset = {
 			name: spec.name,
 			values: spec.values || null,
@@ -164,12 +164,12 @@ ggjs.Dataset = (function() {
 					for (i = 0; i < values.length; i++) {
 						val = values[i][fieldName];
 						if (!isUndefined(val)) {
-							values[i][fieldName] = Date.parse(val);
+							values[i][fieldName] = new Date(val);
 						}
 					}
 					break;
 				default:
-					throw "Can't apply data type, unrecognised data type " + dataType;
+					throw new Error("Can't apply data type, unrecognised data type " + dataType);
 			}
 		}
 	};
@@ -203,7 +203,7 @@ ggjs.Data = (function () {
 
 	prototype.dataset = function (datasetName, dataset) {
 		// ToDo: Get or set dataset
-		if (arguments.length < 1) throw "dataset function needs datasetName argument.";
+		if (arguments.length < 1) throw new Error("dataset function needs datasetName argument.");
 		if (arguments.length == 1) return this.datasets[datasetName];
 		// ToDo: set as object, ggjs dataset (or either)?
 		this.datasets[datasetName] = ggjs.dataset(dataset);
@@ -233,7 +233,7 @@ ggjs.datasets = function (s) {
 ggjs.Axis = (function() {
 	var axis = function(spec) {
 		spec = spec || {};
-		if (ggjs.util.isUndefined(spec.type)) throw "The axis type must be defined";
+		if (ggjs.util.isUndefined(spec.type)) throw new Error("The axis type must be defined");
 		this.axis = {
 			type: spec.type,
 			scaleName: spec.scaleName || null
@@ -279,7 +279,7 @@ ggjs.Axes = (function() {
 
 	prototype.axis = function(axisType, axis) {
 		// ToDo: Get or set axis
-		if (arguments.length < 1) throw "axis function needs axisType argument.";
+		if (arguments.length < 1) throw new Error("axis function needs axisType argument.");
 		if (arguments.length == 1) return this.axes[axisType];
 		this.axes[axisType] = ggjs.axis(axis);
 		return this;
@@ -393,7 +393,7 @@ ggjs.Scales = (function() {
 
 	prototype.scale = function(scaleName, scale) {
 		// Gets or set scale by name
-		if (arguments.length < 1) throw "scale function needs scaleName argument.";
+		if (arguments.length < 1) throw new Error("scale function needs scaleName argument.");
 		if (arguments.length == 1) return this.scales[scaleName];
 		this.scales[scaleName] = ggjs.scale(scale);
 		return this;
@@ -851,7 +851,7 @@ ggjs.Plot = (function () {
 			case "polar":
 				return Math.floor(this.plotAreaHeight() / 2);
 			default:
-				throw "Can't get y axis height, unknown co-ordinate system " + this.coord(); 
+				throw new Error("Can't get y axis height, unknown co-ordinate system " + this.coord()); 
 		}
 	};
 
@@ -907,10 +907,10 @@ ggjs.Renderer = (function (d3) {
 			try {
 				parentWidth = d3.select(plotDef.selector()).node().offsetWidth;
 			} catch (err) {
-				throw "Couldn't find the width of the parent element."; 
+				throw new Error("Couldn't find the width of the parent element."); 
 			}
 			if (typeof parentWidth === 'undefined' || parentWidth == null) {
-				throw "Couldn't find the width of the parent element.";
+				throw new Error("Couldn't find the width of the parent element.");
 			}
 			this.renderer.plotDef.width(parentWidth);
 		}
@@ -930,7 +930,7 @@ ggjs.Renderer = (function (d3) {
 
 	prototype.d3Scale = function (scaleName, val) {
 		if (!arguments.length) {
-			throw "Must supply args when getting/setting d3 scale"
+			throw new Error("Must supply args when getting/setting d3 scale");
 		}
 		else if (arguments.length === 1) {
 			return this.renderer.scaleNameToD3Scale[scaleName];
@@ -971,7 +971,7 @@ ggjs.Renderer = (function (d3) {
 				switch (contentTypeLC) {
 					case "text/csv":
 						d3.csv(url, function(err, res) {
-							if (err) throw "Error fetching CSV results: " + err.statusText;
+							if (err) throw new Error("Error fetching CSV results: " + err.statusText);
 							dataset.values(res);
 							dataset.applyDataTypes();
 							callback(null, res);
@@ -980,7 +980,7 @@ ggjs.Renderer = (function (d3) {
 					case "text/tsv":
 					case "text/tab-separated-values":
 						d3.tsv(url, function(err, res) {
-							if (err) throw "Error fetching TSV results: " + err.statusText;
+							if (err) throw new Error("Error fetching TSV results: " + err.statusText);
 							dataset.values(res);
 							dataset.applyDataTypes();
 							callback(null, res);
@@ -988,7 +988,7 @@ ggjs.Renderer = (function (d3) {
 						break;
 					case "application/json":
 						d3.json(url, function(err, res) {
-							if (err) throw "Error fetching JSON results: " + err.statusText;
+							if (err) throw new Error("Error fetching JSON results: " + err.statusText);
 							dataset.values(res);
 							dataset.applyDataTypes();
 							callback(null, res);
@@ -996,13 +996,13 @@ ggjs.Renderer = (function (d3) {
 						break;
 					case "application/vnd.geo+json":
 						d3.json(url, function(err, res) {
-							if (err) throw "Error fetching GEO JSON results: " + err.statusText;
+							if (err) throw new Error("Error fetching GEO JSON results: " + err.statusText);
 							dataset.values(res);
 							callback(null, res);
 						});
 						break;
 					default:
-						throw "Don't know you to load data of type " + contentType;
+						throw new Error("Don't know you to load data of type " + contentType);
 				}
 			},
 			q = queue(3),
@@ -1019,7 +1019,7 @@ ggjs.Renderer = (function (d3) {
 		q.awaitAll(function(error, results) {
 				if (error) {
 					// ToDo: write error in place of chart?
-					throw "Error fetching data results: " + error.statusText;
+					throw new Error("Error fetching data results: " + error.statusText);
 				}
 				// Data loaded - continue rendering
 				finishedCallback();
@@ -1157,7 +1157,7 @@ ggjs.Renderer = (function (d3) {
 					this.drawMapTiles(plotArea, layerDef);
 					break;
 				default:
-					throw "Cannot draw layer, geom type not supported: " + layerDef.geom().geomType();
+					throw new Error("Cannot draw layer, geom type not supported: " + layerDef.geom().geomType());
 			}
 		}
 
@@ -1230,17 +1230,20 @@ ggjs.Renderer = (function (d3) {
 			dataset = this.getDataset(datasetName),
 			lines, values;
 
-		values = dataset.values();
+		// Take a copy of values as sorting will mutate the dataset (other layers
+		//	might need data order preserved)
+		values = ggjs.util.deepCopy(dataset.values())
 
 		// ToDo: values need to be ordered by x axis before drawing (see Table 4.2
 		//   in GGPlot2 book)
+		ggjs.dataHelper.sortDatatable(values, xField);
 
 		switch (plotDef.coord()) {
 			case "cartesian":
 				lines = this.drawCartesianLineLayer(plotArea, values, xField, yField, xScale, yScale);
 				break;
 			default:
-				throw "Don't know how to draw lines for co-ordinate system " + plotDef.coord();
+				throw new Error("Don't know how to draw lines for co-ordinate system " + plotDef.coord());
 		}
 
 		// ToDo: apply line colour
@@ -1250,48 +1253,22 @@ ggjs.Renderer = (function (d3) {
 
 	prototype.drawCartesianLineLayer = function (plotArea, values, xField, yField, xScale, yScale) {
 		var line, lines;
-		console.log(values)
-		console.log(xScale)
-		console.log(values[0][xField])
-		// console.log(Date.parse(values[0][xField]))
-		// console.log(xScale(Date.parse(values[0][xField])))
 		console.log(xScale(values[0][xField]))
 		line = d3.svg.line()
-				.x(function (d) { console.log(xScale(d[xField])); return xScale(d[xField]); })
-				.y(function (d) { console.log(yScale(d[yField])); return yScale(d[yField]); });
-		console.log(line)
-		console.log(line({Sensor1: 5.3, Time: 1420070400000}))
-			// lines = plotArea.selectAll("path.ggjs-lines")
-			// 	.data(values)
-			// .enter().append("path")
-			// 	.attr("class", "ggjs-lines")
-			// 	.attr("d", function (d) { return line(d); })
-			// 	.style("stroke", "black");
+				.x(function (d) { console.log("xField", d[xField], xScale(d[xField])); return xScale(d[xField]); })
+				.y(function (d) { console.log("yField", yScale(d[yField])); return yScale(d[yField]); });
 		// ToDo: work out how to support line series (current values is
 		//	put in an array to make the line function work). Needs to 
 		//  work with series legend
-		lines = plotArea.selectAll("path.line")
+		lines = plotArea.selectAll("path.ggjs-line")
 					.data([values])
 				.enter()
 					.append("path")
-					.attr("class", "line")
+					.attr("class", "ggjs-line")
 					.attr("d", line)
 					.style("fill", "none")
 					.style("stroke", "black")
-					.style("stroke-width", "5");
-					// .attr("d", function (d) { 
-					// 	var results;	
-					// 	// console.log(d); 
-					// 	// console.log(xScale(d[xField]));
-					// 	// console.log(yScale(d[yField]));
-					// 	try {
-					// 		results = line(d);
-					// 	} catch (e) {
-					// 		console.log("Prob")
-					// 	}
-					// 	//console.log(results)
-						
-					// 	return results; });
+					.style("stroke-width", "1");
 		return lines;
 	};
 
@@ -1303,7 +1280,7 @@ ggjs.Renderer = (function (d3) {
 				this.drawMapPathLayer(plotArea, layerDef);
 				break;
 			default:
-				throw "Do not know how to draw path for coord " + plotDef.coord();
+				throw new Error("Do not know how to draw path for coord " + plotDef.coord());
 		}
 	};
 
@@ -1374,7 +1351,7 @@ ggjs.Renderer = (function (d3) {
 				this.drawMapPointLayer(plotArea, values, aesmappings, xField, yField, xScale, yScale);
 				break;
 			default:
-				throw "Do not know how to draw point for coord " + plotDef.coord();
+				throw new Error("Do not know how to draw point for coord " + plotDef.coord());
 		}
 	};
 
@@ -1471,8 +1448,8 @@ ggjs.Renderer = (function (d3) {
 			xField, yField, labelField,
 			points;
 
-		if (xAes == null) throw "Cannot draw text layer, x aesthetic no specified";
-		if (yAes == null) throw "Cannot draw text layer, y aesthetic no specified";
+		if (xAes == null) throw new Error("Cannot draw text layer, x aesthetic no specified");
+		if (yAes == null) throw new Error("Cannot draw text layer, y aesthetic no specified");
 
 		xField = xAes.field();
 		yField = yAes.field();
@@ -1536,13 +1513,13 @@ ggjs.Renderer = (function (d3) {
 			// Work out new baseline for each x value
 			var fillScaleDef = this.scaleDef(fillAesMap.scaleName());
 			if (fillScaleDef == null) {
-				throw "No scale could be found for fill scale " + fillAesMap.scaleName();
+				throw new Error("No scale could be found for fill scale " + fillAesMap.scaleName());
 			}
 
 			if (this.xAxisScaleDef().isOrdinal() && fillScaleDef.isOrdinal()) {
 				values = ggjs.dataHelper.generateStackYValues(values, xField, fillAesMap.field(), yField);
 			} else {
-				throw "Do not know how to draw stacked/dodged bars with non ordinal scales."
+				throw new Error("Do not know how to draw stacked/dodged bars with non ordinal scales.");
 			}
 		}
 
@@ -1554,7 +1531,7 @@ ggjs.Renderer = (function (d3) {
 				bars = this.drawPolarBars(plotArea, values, xField, yField, xScale, yScale, yAxisHeight, isStacked);
 				break;
 			default:
-				throw "Don't know how to draw bars for co-ordinate system " + plotDef.coord();
+				throw new Error("Don't know how to draw bars for co-ordinate system " + plotDef.coord());
 		}
 
 		this.applyFillColour(bars, aesmappings);
@@ -1682,7 +1659,7 @@ ggjs.Renderer = (function (d3) {
 			case "mercator":
 				break;
 			default:
-				throw "Unrecognised coordinate system used."
+				throw new Error("Unrecognised coordinate system used.");
 		}
 	};
 
@@ -1718,13 +1695,13 @@ ggjs.Renderer = (function (d3) {
 			// Use default dataset for the plot
 			datasetNames = plotDef.data().names();
 			if (datasetNames.length !== 1) {
-				throw "Expected one DataSet in the Plot to use as the default DataSet";
+				throw new Error("Expected one DataSet in the Plot to use as the default DataSet");
 			}
 			datasetName = datasetNames[0];
 			dataset = plotDef.data().dataset(datasetName);
 
 			if (dataset == null) {
-				throw "Couldn't find a layer DataSet or a default DataSet.";
+				throw new Error("Couldn't find a layer DataSet or a default DataSet.");
 			}
 		}
 		return dataset;
@@ -1751,7 +1728,7 @@ ggjs.Renderer = (function (d3) {
 			//dataset = plotDef.data().dataset(datasetName);
 			dataset = this.getDataset(datasetName);
 			if (dataset == null) {
-				throw "Unable to find dataset with name " + datasetName;
+				throw new Error("Unable to find dataset with name " + datasetName);
 			}
 
 			if (aesmap) {
@@ -1783,13 +1760,13 @@ ggjs.Renderer = (function (d3) {
 			valueAes = layer.aesmappings().findByAes(aes);
 
 		if (valueAes == null) {
-			throw "Need value aes map to find stacked value";
+			throw new Error("Need value aes map to find stacked value");
 		}
 		if (xAes == null) {
-			throw "Need x aes map to find stacked value";
+			throw new Error("Need x aes map to find stacked value");
 		}
 		if (fillAes == null) {
-			throw "Need fill aes map to find stacked value";
+			throw new Error("Need fill aes map to find stacked value");
 		}
 
 		if (aes === "y") {
@@ -1797,7 +1774,7 @@ ggjs.Renderer = (function (d3) {
 			tmpStat = ggjs.dataHelper.maxStackValue(dataset.values(), 
 				xAes.field(), fillAes.field(), valueAes.field());
 		} else {
-			throw "Don't know how to find stacked value for value aes " + aes;
+			throw new Error("Don't know how to find stacked value for value aes " + aes);
 		}
 
 		return tmpStat;
@@ -1818,7 +1795,7 @@ ggjs.Renderer = (function (d3) {
 		}
 		dataset = this.getDataset(datasetName);
 		if (dataset == null) {
-			throw "Unable to find dataset with name " + datasetName;
+			throw new Error("Unable to find dataset with name " + datasetName);
 		}
 
 		if (aesmap) {
@@ -2069,8 +2046,12 @@ ggjs.Renderer = (function (d3) {
 					scale.rangeBands([0, 2 * Math.PI], 0);
 				}
 				break;
+			case "mercator":
+				console.log("ToDo: set up geo axis");
+				break;
+			default:
+				throw new Error("Don't know how to set axis range for co-ordinate type " + plotDef.coord());
 		}
-		
 
 		this.setupAxisScale("x", scale, scaleDef);
 		axis.scale(scale);
@@ -2105,6 +2086,11 @@ ggjs.Renderer = (function (d3) {
 				// Y scale range is half height of plot area
 				scale.range([Math.floor(plotDef.plotAreaHeight() / 2), 0]);
 				break;
+			case "mercator":
+				console.log("ToDo: set up geo axis");
+				break;
+			default:
+				throw new Error("Don't know how to set axis range for co-ordinate type " + plotDef.coord());
 		}
 
 		this.setupAxisScale("y", scale, scaleDef);
@@ -2141,7 +2127,7 @@ ggjs.Renderer = (function (d3) {
 				scale = d3.scale.category10();
 				break;
 			default:
-				throw "Unknow D3 scale type " + scaleDef.type();
+				throw new Error("Unknow D3 scale type " + scaleDef.type());
 		}
 
 		if (scale == null) {
@@ -2372,7 +2358,7 @@ ggjs.dataHelper = (function (d3) {
 					statVal = datatableSum(datatable, field);
 					break;
 				default:
-					throw "Can't get datatables stat, unknown stat " + stat;
+					throw new Error("Can't get datatables stat, unknown stat " + stat);
 			}
 			return statVal;
 		},
@@ -2392,7 +2378,7 @@ ggjs.dataHelper = (function (d3) {
 					}
 					break;
 				default:
-					throw "Can't get datatables stat, unknown stat " + stat;
+					throw new Error("Can't get datatables stat, unknown stat " + stat);
 			}
 
 			return statVal;
@@ -2447,7 +2433,21 @@ ggjs.dataHelper = (function (d3) {
 			max = d3.max(nested_data, function (d) { return d.values.stack_sum; })
 
 			return max;
-		};;
+		},
+		sortDatatable = function (datatable, field) {
+			// Sorts the datatable rows according to the supplied field
+			// Mutates the datatable
+			datatable.sort(function (a, b) {
+				if (a[field] > b[field]) {
+					return 1;
+				}
+				if (a[field] < b[field]) {
+					return -1;
+				}
+				return 0;
+			});
+			return datatable;
+		};
 
 	return {
 		datatableMin: datatableMin,
@@ -2456,7 +2456,8 @@ ggjs.dataHelper = (function (d3) {
 		datatableStat: datatableStat,
 		datatablesStat: datatablesStat,
 		generateStackYValues: generateStackYValues,
-		maxStackValue: maxStackValue
+		maxStackValue: maxStackValue,
+		sortDatatable: sortDatatable
 	}
 })(d3);
 
