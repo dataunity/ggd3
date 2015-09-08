@@ -58,5 +58,4 @@ describe("Module: ggjs.util.array", function() {
 		});
 
 	});
-
 });

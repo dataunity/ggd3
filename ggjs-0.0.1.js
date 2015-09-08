@@ -11,6 +11,31 @@ ggjs.util = (function () {
 		isNullOrUndefined = function (val) {
 			return isUndefined(val) || val == null;
 		},
+		isFunction = function(obj) {
+			return typeof obj === "function";
+		},
+		isArray = Array.isArray,
+		isPlainObject = function( obj ) {
+			// Note: Copied from jQuery source (slightly modified to reduce dependencies)
+			var hasOwn = {}.hasOwnProperty;
+
+			// Not plain objects:
+			// - Any object or value whose internal [[Class]] property is not "[object Object]"
+			// - DOM nodes
+			// - window
+			if ( typeof obj !== "object" || obj.nodeType ) { // || jQuery.isWindow( obj ) ) {
+				return false;
+			}
+
+			if ( obj.constructor &&
+					!hasOwn.call( obj.constructor.prototype, "isPrototypeOf" ) ) {
+				return false;
+			}
+
+			// If the function hasn't returned already, we're confident that
+			// |obj| is a plain object, created by {} or constructed with new Object
+			return true;
+		},
 		objKeys = function (obj) {
 			var keys = [],
 				key;
@@ -22,8 +47,83 @@ ggjs.util = (function () {
 		countObjKeys = function (obj) {
 			return objKeys(obj).length;
 		},
+		extend = function() {
+			// Note: Copied from jQuery source
+			var options, name, src, copy, copyIsArray, clone,
+				target = arguments[ 0 ] || {},
+				i = 1,
+				length = arguments.length,
+				deep = false;
+
+			// Handle a deep copy situation
+			if ( typeof target === "boolean" ) {
+				deep = target;
+
+				// Skip the boolean and the target
+				target = arguments[ i ] || {};
+				i++;
+			}
+
+			// Handle case when target is a string or something (possible in deep copy)
+			if ( typeof target !== "object" && !isFunction( target ) ) {
+				target = {};
+			}
+
+			// Extend jQuery itself if only one argument is passed
+			if ( i === length ) {
+				target = this;
+				i--;
+			}
+
+			for ( ; i < length; i++ ) {
+
+				// Only deal with non-null/undefined values
+				if ( ( options = arguments[ i ] ) != null ) {
+
+					// Extend the base object
+					for ( name in options ) {
+						src = target[ name ];
+						copy = options[ name ];
+
+						// Prevent never-ending loop
+						if ( target === copy ) {
+							continue;
+						}
+
+						// Recurse if we're merging plain objects or arrays
+						if ( deep && copy && ( isPlainObject( copy ) ||
+							( copyIsArray = isArray( copy ) ) ) ) {
+
+							if ( copyIsArray ) {
+								copyIsArray = false;
+								clone = src && isArray( src ) ? src : [];
+
+							} else {
+								clone = src && isPlainObject( src ) ? src : {};
+							}
+
+							// Never move original objects, clone them
+							target[ name ] = extend( deep, clone, copy );
+
+						// Don't bring in undefined values
+						} else if ( copy !== undefined ) {
+							target[ name ] = copy;
+						}
+					}
+				}
+			}
+
+			// Return the modified object
+			return target;
+		},
 		deepCopy = function (obj) {
-			return JSON.parse(JSON.stringify(obj));
+			if (isArray(obj)) {
+				return extend(true, [], obj);
+			} else {
+				return extend(true, {}, obj);
+			}
+			//return extend(true, {}, obj);
+			// return JSON.parse(JSON.stringify(obj));
 		},
 		toBoolean = function(obj){
 			var str;
@@ -48,11 +148,13 @@ ggjs.util = (function () {
 	return {
 		isUndefined: isUndefined,
 		isNullOrUndefined: isNullOrUndefined,
+		isArray: isArray,
 		objKeys: objKeys,
 		countObjKeys: countObjKeys,
 		deepCopy: deepCopy,
-		toBoolean: toBoolean
-	}
+		toBoolean: toBoolean,
+		isPlainObject: isPlainObject
+	};
 })();
 
 ggjs.util.array = (function () {
@@ -74,9 +176,8 @@ ggjs.util.array = (function () {
 	return {
 		indexOf: indexOf,
 		contains: contains
-	}
+	};
 })();
-
 
 // ------------------
 // Datasets
@@ -163,9 +264,11 @@ ggjs.Dataset = (function() {
 				case "date":
 					for (i = 0; i < values.length; i++) {
 						val = values[i][fieldName];
+						console.log("Val before:", val)
 						if (!isUndefined(val)) {
 							values[i][fieldName] = new Date(val);
 						}
+						console.log("Val after:", typeof values[i][fieldName], values[i][fieldName])
 					}
 					break;
 				default:
@@ -1040,8 +1143,8 @@ ggjs.Renderer = (function (d3) {
   //   		height = Math.max(500, window.innerHeight);
 
 		var projection = d3.geo.mercator()
-			//.scale((1 << 12) / 2 / Math.PI) // US
-			.scale((1 << 20) / 2 / Math.PI) // Lambeth
+			.scale((1 << 20) / 2 / Math.PI) // US
+			// .scale((1 << 20) / 2 / Math.PI) // Lambeth
 			.translate([width / 2, height / 2]);
 
 		//var center = projection([-100, 40]);	// US
@@ -1190,7 +1293,7 @@ ggjs.Renderer = (function (d3) {
 
 		var raster = svg.append("g");
 
-		//function zoomed() {
+		function zoomed() {
 			var tiles = tile
 				.scale(zoom.scale())
 				.translate(zoom.translate())
@@ -1205,14 +1308,15 @@ ggjs.Renderer = (function (d3) {
 				.remove();
 
 			image.enter().append("image")
-				.attr("xlink:href", function(d) { return "http://" + ["a", "b", "c", "d"][Math.random() * 4 | 0] + ".tiles.mapbox.com/v3/examples.map-i86nkdio/" + d[2] + "/" + d[0] + "/" + d[1] + ".png"; })
+				// .attr("xlink:href", function(d) { return "http://" + ["a", "b", "c", "d"][Math.random() * 4 | 0] + ".tiles.mapbox.com/v3/examples.map-i86nkdio/" + d[2] + "/" + d[0] + "/" + d[1] + ".png"; })
+				.attr("xlink:href", function(d) { return "http://" + ["a", "b", "c"][Math.random() * 3 | 0] + ".tile.openstreetmap.org/" + d[2] + "/" + d[0] + "/" + d[1] + ".png"; })
 				.attr("class", "ggjs-tile")
 				.attr("width", 1)
 				.attr("height", 1)
 				.attr("x", function(d) { return d[0]; })
 				.attr("y", function(d) { return d[1]; });
-		//}
-		//zoomed();
+		}
+		zoomed();
 	};
 
 	prototype.drawLineLayer = function (plotArea, layerDef) {
@@ -1237,6 +1341,8 @@ ggjs.Renderer = (function (d3) {
 		// ToDo: values need to be ordered by x axis before drawing (see Table 4.2
 		//   in GGPlot2 book)
 		ggjs.dataHelper.sortDatatable(values, xField);
+		console.log("Values after sort")
+		console.log(values)
 
 		switch (plotDef.coord()) {
 			case "cartesian":
@@ -1252,23 +1358,21 @@ ggjs.Renderer = (function (d3) {
 	};
 
 	prototype.drawCartesianLineLayer = function (plotArea, values, xField, yField, xScale, yScale) {
-		var line, lines;
-		console.log(xScale(values[0][xField]))
-		line = d3.svg.line()
-				.x(function (d) { console.log("xField", d[xField], xScale(d[xField])); return xScale(d[xField]); })
-				.y(function (d) { console.log("yField", yScale(d[yField])); return yScale(d[yField]); });
-		// ToDo: work out how to support line series (current values is
-		//	put in an array to make the line function work). Needs to 
-		//  work with series legend
-		lines = plotArea.selectAll("path.ggjs-line")
-					.data([values])
-				.enter()
-					.append("path")
-					.attr("class", "ggjs-line")
-					.attr("d", line)
-					.style("fill", "none")
-					.style("stroke", "black")
-					.style("stroke-width", "1");
+		var line = d3.svg.line()
+					.x(function (d) { return xScale(d[xField]); })
+					.y(function (d) { return yScale(d[yField]); }),
+			// ToDo: work out how to support line series (current values is
+			//	put in an array to make the line function work). Needs to 
+			//  work with series legend
+			lines = plotArea.selectAll("path.ggjs-line")
+						.data([values])
+					.enter()
+						.append("path")
+						.attr("class", "ggjs-line")
+						.attr("d", line)
+						.style("fill", "none")
+						.style("stroke", "black")
+						.style("stroke-width", "1");
 		return lines;
 	};
 
@@ -2002,14 +2106,14 @@ ggjs.Renderer = (function (d3) {
 				scale.domain(allValues);
 				//scale.domain(data.map(function(d) { return d.letter; }));
 			} else if (scaleDef.isTime()) {
-				// min = this.statAcrossLayers(aes, "min");
-				// max = this.statAcrossLayers(aes, "max");
-				// if (!isNaN(max)) {
-				// 	scale.domain([0, max]).nice();
-				// }
-				console.log("setting time scale domain")
-				min = new Date(2014);
-				max = new Date(2016);
+				min = this.statAcrossLayers(aes, "min");
+				max = this.statAcrossLayers(aes, "max");
+				if (isNaN(min)) {
+					min = new Date(1970, 0, 1);
+				}
+				if (isNaN(max)) {
+					max = new Date(Date.now());
+				}
 				scale.domain([min, max]).nice();
 			}
 		}

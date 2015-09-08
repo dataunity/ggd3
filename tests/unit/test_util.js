@@ -18,12 +18,23 @@ describe("Module: ggjs.util", function() {
 		});
 	});
 
+	describe("isArray", function () {
+		it("should identify array", function () {
+			expect(ggjs.util.isArray([])).toBe(true);
+		});
+	});
+
+	describe("isPlainObject", function() {
+		it("should identify plain object", function() {
+			expect(ggjs.util.isPlainObject({})).toEqual(true);
+		});
+	});
+
 	describe("objKeys", function() {
 		it("should find keys in obj", function() {
 			expect(ggjs.util.objKeys({})).toEqual([]);
 			expect(ggjs.util.objKeys({"a": "a", "b": "b"}).sort()).toEqual(["a", "b"]);
 		});
-
 	});
 
 	describe("countObjKeys", function() {
@@ -58,6 +69,17 @@ describe("Module: ggjs.util", function() {
 			// Check changes to original don't change the deep copy
 			arr.push({"a": 100});
 			expect(arrCopy).toEqual([{"a": 1}, {"b": 2}]);
+		});
+
+		it("should preserve date type on deep copy", function() {
+			var arr = [{"a": new Date(2015, 0, 1)}, {"b": new Date(2020, 0, 1)}],
+				arrCopy = ggjs.util.deepCopy(arr);
+			expect(arrCopy).toEqual([{"a": new Date(2015, 0, 1)}, {"b": new Date(2020, 0, 1)}]);
+
+			// Check changes to original don't change the deep copy
+			arr.push({"c": 100});
+			arr[0]["a"] = new Date(2010, 11, 31);
+			expect(arrCopy).toEqual([{"a": new Date(2015, 0, 1)}, {"b": new Date(2020, 0, 1)}]);
 		});
 	});
 
