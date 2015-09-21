@@ -27,6 +27,6 @@
 .ggjs-tile {
 	pointer-events: none;
 	position: absolute;
-	width: 256px;
-	height: 256px;
+	/*width: 256px;
+	height: 256px;*/
 }

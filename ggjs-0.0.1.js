@@ -1308,8 +1308,7 @@ ggjs.Renderer = (function (d3) {
 				.remove();
 
 			image.enter().append("image")
-				// .attr("xlink:href", function(d) { return "http://" + ["a", "b", "c", "d"][Math.random() * 4 | 0] + ".tiles.mapbox.com/v3/examples.map-i86nkdio/" + d[2] + "/" + d[0] + "/" + d[1] + ".png"; })
-				.attr("xlink:href", function(d) { return "http://" + ["a", "b", "c"][Math.random() * 3 | 0] + ".tile.openstreetmap.org/" + d[2] + "/" + d[0] + "/" + d[1] + ".png"; })
+				.attr("xlink:href", function(d) { return "http://" + ["a", "b", "c", "d"][Math.random() * 4 | 0] + ".tiles.mapbox.com/v3/examples.map-zr0njcqy/" + d[2] + "/" + d[0] + "/" + d[1] + ".png"; })
 				.attr("class", "ggjs-tile")
 				.attr("width", 1)
 				.attr("height", 1)
