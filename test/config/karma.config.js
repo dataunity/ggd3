@@ -1,6 +1,9 @@
 // Karma configuration
 // Generated on Wed Jul 30 2014 10:17:32 GMT+0100 (BST)
 
+// NOTE: NOT USED ANY MORE WITH GRUNT
+// SAFE TO REMOVE
+
 module.exports = function(config) {
   config.set({
 

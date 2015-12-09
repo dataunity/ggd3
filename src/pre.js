@@ -6,16 +6,14 @@
 
         if ( hasDefine ){ 
             // AMD Module
-            define(['jquery', 'du-stomp'], factory);
+            define(['d3'], factory);
         } else if ( hasExports ) { 
             // Node.js Module
-            module.exports = factory(require(['jquery', 'du-stomp']));
+            module.exports = factory(require(['d3']));
         } else { 
             // Assign to common namespaces or simply the global object (window)
-            global.duDashboards = factory(jQuery, Stomp);
+            global.duDashboards = factory(d3);
         }
-})(typeof window !== "undefined" ? window : this, function ($, Stomp) {
+})(typeof window !== "undefined" ? window : this, function (d3) {
     'use strict';
-    console.log("TODO: PUT IN REAL GGJS");
-    var ggjs = null;
-    var dashboard = {};
+    var ggjs = {};

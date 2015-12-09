@@ -6,6 +6,19 @@ module.exports = function (grunt) {
         concat: {
             dashboards: {
                 src: ['src/pre.js',
+                    'src/util.js',
+                    'src/dataset.js',
+                    'src/data.js',
+                    'src/axis.js',
+                    'src/axes.js',
+                    'src/scales.js',
+                    'src/padding.js',
+                    'src/aesmappings.js',
+                    'src/geom.js',
+                    'src/layers.js',
+                    'src/plot.js',
+                    'src/renderer.js',
+                    'src/datahelper.js',
                     'src/post.js'],
                 dest: 'build/<%= pkg.name %>.js'
             }
@@ -42,10 +55,10 @@ module.exports = function (grunt) {
                         requireConfig: {
                             // baseUrl: 'src/'
                             baseUrl: 'build/',
-                            paths: {
-                                // 'jquery': 'lib/jquery-1.11.3.min',
-                                //'du-stomp': 'du-stomp.js'
-                            }
+                            // paths: {
+                            //     // 'jquery': 'lib/jquery-1.11.3.min',
+                            //     'd3': 'lib/d3.js'
+                            // }
                         }
                     }
                 }
