@@ -1,0 +1,42 @@
+{
+  "name": "ggjs",
+  "version": "0.1.0",
+  "description": "Javascript data visualisation",
+  "main": "ggjs-0.0.1.js",
+  "directories": {
+    "example": "examples",
+    "test": "tests"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "grunt": "^0.4.5",
+    "grunt-contrib-concat": "^0.5.1",
+    "grunt-contrib-jasmine": "^0.9.2",
+    "grunt-contrib-jshint": "^0.11.3",
+    "grunt-contrib-uglify": "^0.11.0",
+    "grunt-contrib-watch": "^0.6.1",
+    "grunt-template-jasmine-requirejs": "^0.2.3"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dataunity/ggjs.git"
+  },
+  "keywords": [
+    "data",
+    "visualisation",
+    "visualization",
+    "charts",
+    "charting",
+    "plot",
+    "plots"
+  ],
+  "author": "Kev Kirkland",
+  "license": "SEE LICENSE IN LICENSE",
+  "bugs": {
+    "url": "https://github.com/dataunity/ggjs/issues"
+  },
+  "homepage": "https://github.com/dataunity/ggjs#readme"
+}
