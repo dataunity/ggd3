@@ -808,7 +808,7 @@ ggjs.Renderer = (function (d3) {
         var plotDef = this.plotDef(),
             dataset = plotDef.data().dataset(datasetName),
             datasetNames;
-        if (dataset === null) {
+        if (dataset === null || typeof dataset === "undefined") {
             // Use default dataset for the plot
             datasetNames = plotDef.data().names();
             if (datasetNames.length !== 1) {

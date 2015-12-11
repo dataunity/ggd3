@@ -12,7 +12,7 @@
             module.exports = factory(require(['d3']));
         } else { 
             // Assign to common namespaces or simply the global object (window)
-            global.duDashboards = factory(d3);
+            global.ggjs = factory(d3);
         }
 })(typeof window !== "undefined" ? window : this, function (d3) {
     'use strict';

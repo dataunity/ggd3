@@ -12,7 +12,7 @@
             module.exports = factory(require(['d3']));
         } else { 
             // Assign to common namespaces or simply the global object (window)
-            global.duDashboards = factory(d3);
+            global.ggjs = factory(d3);
         }
 })(typeof window !== "undefined" ? window : this, function (d3) {
     'use strict';
@@ -1757,7 +1757,7 @@ ggjs.Renderer = (function (d3) {
         var plotDef = this.plotDef(),
             dataset = plotDef.data().dataset(datasetName),
             datasetNames;
-        if (dataset === null) {
+        if (dataset === null || typeof dataset === "undefined") {
             // Use default dataset for the plot
             datasetNames = plotDef.data().names();
             if (datasetNames.length !== 1) {
