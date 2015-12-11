@@ -1,4 +1,4 @@
-define(['ggjs'], function(ggjs) {
+define(['../../lib/d3.js', 'ggjs'], function(d3, ggjs) {
 	describe("Module: ggjs.Padding", function() {
 		
 		describe("padding initialisation", function() {

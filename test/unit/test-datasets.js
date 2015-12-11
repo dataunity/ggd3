@@ -1,4 +1,4 @@
-define(['ggjs'], function(ggjs) {
+define(['../../lib/d3.js', 'ggjs'], function(d3, ggjs) {
 	describe("Module: ggjs.Datasets", function() {
 		
 		it("should initialise the datasets with one dataset", function() {

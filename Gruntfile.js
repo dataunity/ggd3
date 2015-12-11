@@ -55,10 +55,9 @@ module.exports = function (grunt) {
                         requireConfig: {
                             // baseUrl: 'src/'
                             baseUrl: 'build/',
-                            // paths: {
-                            //     // 'jquery': 'lib/jquery-1.11.3.min',
-                            //     'd3': 'lib/d3.js'
-                            // }
+                            paths: {
+                                'd3': '../lib/d3'
+                            }
                         }
                     }
                 }

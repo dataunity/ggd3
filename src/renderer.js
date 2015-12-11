@@ -1357,7 +1357,7 @@ ggjs.Renderer = (function (d3) {
             i, j, layerDef, legendArea, legendBaseX, legendBaseY, 
             scaleNamesLookup = {},
             scaleNamesToDisplay = [],
-            legendData, aesmappings, aesmapping, aes, scaleName, scale;
+            legendData, legend, aesmappings, aesmapping, aes, scaleName, scale;
 
         // ToDo: legend position
         switch ("top") {

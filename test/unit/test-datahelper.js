@@ -1,4 +1,4 @@
-define(['ggjs'], function(ggjs) {
+define(['../../lib/d3.js', 'ggjs'], function(d3, ggjs) {
 	describe("Module: ggjs.dataHelper", function() {
 		var datatable1 = [
 				{ "x": 1, "y": 10},
