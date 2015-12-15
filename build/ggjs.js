@@ -17,6 +17,7 @@
 })(typeof window !== "undefined" ? window : this, function (d3) {
     'use strict';
     var ggjs = {};
+
 ggjs.util = (function () {
     var isUndefined = function (val) {
             return typeof val === 'undefined';
@@ -191,6 +192,7 @@ ggjs.util.array = (function () {
         contains: contains
     };
 })();
+
 ggjs.Dataset = (function() {
     var dataset = function(spec) {
         spec = spec || {};
@@ -297,6 +299,7 @@ ggjs.Dataset = (function() {
 ggjs.dataset = function (s) {
     return new ggjs.Dataset(s);
 };
+
 ggjs.Data = (function () {
     var datasets = function (s) {
         var i, dataset;
@@ -334,6 +337,7 @@ ggjs.Data = (function () {
 ggjs.datasets = function (s) {
     return new ggjs.Data(s);
 };
+
 ggjs.Axis = (function() {
     var axis = function(spec) {
         spec = spec || {};
@@ -366,6 +370,7 @@ ggjs.Axis = (function() {
 ggjs.axis = function (s) {
     return new ggjs.Axis(s);
 };
+
 ggjs.Axes = (function() {
     var axes = function(s) {
         var i, axis;
@@ -403,6 +408,7 @@ ggjs.Axes = (function() {
 ggjs.axes = function (s) {
     return new ggjs.Axes(s);
 };
+
 ggjs.Scale = (function () {
     var scale = function(spec) {
         this.scale = {
@@ -510,6 +516,7 @@ ggjs.Scales = (function() {
 ggjs.scales = function (s) {
     return new ggjs.Scales(s);
 };
+
 ggjs.Padding = (function () {
     var padding = function(s) {
         this.padding = {
@@ -553,6 +560,7 @@ ggjs.Padding = (function () {
 ggjs.padding = function (s) {
     return new ggjs.Padding(s);
 };
+
 ggjs.AesMapping = (function () {
     // Aesthetic mapping shows which variables are mapped to which
     // aesthetics. For example, we might map weight to x position, 
@@ -635,6 +643,7 @@ ggjs.AesMappings = (function () {
 ggjs.aesmappings = function (s) {
     return new ggjs.AesMappings(s);
 };
+
 ggjs.Geom = (function () {
     var geom = function(s) {
         this.geom = {
@@ -657,6 +666,7 @@ ggjs.Geom = (function () {
 ggjs.geom = function (s) {
     return new ggjs.Geom(s);
 };
+
 ggjs.Layer = (function () {
     // Layers are responsible for creating the objects that we perceive on the plot. 
     // A layer is composed of:
@@ -786,6 +796,7 @@ ggjs.Layers = (function () {
 ggjs.layers = function(s) {
     return new ggjs.Layers(s);
 };
+
 ggjs.Plot = (function () {
     // The layered grammar defines the components of a plot as:
     //  - a default dataset and set of mappings from variables to aesthetics,
@@ -947,6 +958,7 @@ ggjs.Plot = (function () {
 ggjs.plot = function(p) {
     return new ggjs.Plot(p);
 };
+
 ggjs.Renderer = (function (d3) {
     var renderer = function (plotDef) {
         this.renderer = {
@@ -2394,6 +2406,7 @@ ggjs.Renderer = (function (d3) {
 ggjs.renderer = function(s) {
     return new ggjs.Renderer(s);
 };
+
 ggjs.dataHelper = (function (d3) {
     var datatableMin = function (datatable, field) {
             // Finds the min value of the field in the datatable
@@ -2526,6 +2539,7 @@ ggjs.dataHelper = (function (d3) {
         sortDatatable: sortDatatable
     };
 })(d3);
+
 
 ggjs.ggjs = (function () {
     // Init
