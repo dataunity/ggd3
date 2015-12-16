@@ -126,6 +126,10 @@ define(['../../lib/d3.js', 'ggjs'], function(d3, ggjs) {
 		it("should find the dataHelper module", function () {
 			expect(typeof ggjs.dataHelper).toEqual("object");
 		});
+
+		it("should find the GeoJSON module", function () {
+			expect(typeof ggjs.geomGeoJSON).toEqual("object");
+		});
 		
 		it("should find the ggjs module", function () {
 			expect(typeof ggjs.ggjs).toEqual("object");

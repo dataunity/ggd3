@@ -156,10 +156,16 @@ ggjs.Renderer = (function (d3) {
         // var width = Math.max(960, window.innerWidth),
   //        height = Math.max(500, window.innerHeight);
 
+        // Orig projection (compatible with tiles)
+        // var projection = d3.geo.mercator()
+        //     .scale((1 << 20) / 2 / Math.PI) // US
+        //     // .scale((1 << 20) / 2 / Math.PI) // Lambeth
+        //     .translate([width / 2, height / 2]);
+
         var projection = d3.geo.mercator()
-            .scale((1 << 20) / 2 / Math.PI) // US
-            // .scale((1 << 20) / 2 / Math.PI) // Lambeth
-            .translate([width / 2, height / 2]);
+            .center([0, 51])
+            .scale(2000)
+            .rotate([0, 0]);
 
         //var center = projection([-100, 40]);  // US
         //var center = projection([-106, 37.5]);    // US
@@ -178,9 +184,9 @@ ggjs.Renderer = (function (d3) {
 
         // With the center computed, now adjust the projection such that
         // it uses the zoom behavior’s translate and scale.
-        projection
-            .scale(1 / 2 / Math.PI)
-            .translate([0, 0]);
+        // projection
+        //     .scale(1 / 2 / Math.PI)
+        //     .translate([0, 0]);
 
         this.geo.projection = projection;
     };
@@ -273,6 +279,9 @@ ggjs.Renderer = (function (d3) {
                 case "GeomGeoTiles":
                     this.drawMapTiles(plotArea, layerDef);
                     break;
+                case "GeomGeoJSON":
+                    this.drawGeoJSONLayer(plotArea, layerDef);
+                    break;
                 default:
                     throw new Error("Cannot draw layer, geom type not supported: " + layerDef.geom().geomType());
             }
@@ -292,11 +301,33 @@ ggjs.Renderer = (function (d3) {
             width = plotDef.plotAreaWidth(),
             height = plotDef.plotAreaHeight(),
             zoom = this.geo.zoom,
+            projection = this.geo.projection,
             plot = this.renderer.plot;
 
         //var width = Math.max(960, window.innerWidth),
         //  height = Math.max(500, window.innerHeight);
+        var tau = 2 * Math.PI;
 
+        var tile = d3.geo.tile()
+            .scale(projection.scale() * tau)
+            .translate(projection([0, 0]))
+            .size([width, height]);
+
+        var tiles = tile();
+
+        plot.append("g").selectAll("image")
+                .data(tiles)
+            .enter().append("image")
+                .attr("xlink:href", function(d) { return "http://" + ["a", "b", "c"][Math.random() * 3 | 0] + ".tile.openstreetmap.org/" + d[2] + "/" + d[0] + "/" + d[1] + ".png"; })
+                .attr("width", Math.round(tiles.scale))
+                .attr("height", Math.round(tiles.scale))
+                .attr("x", function(d) { return Math.round((d[0] + tiles.translate[0]) * tiles.scale); })
+                .attr("y", function(d) { return Math.round((d[1] + tiles.translate[1]) * tiles.scale); });
+
+
+
+        // OLD VERSION BELOW
+        /*
         var tile = d3.geo.tile()
             .size([width, height]);
 
@@ -314,6 +345,7 @@ ggjs.Renderer = (function (d3) {
                 ();
 
             var image = raster
+                    // .attr("transform", "scale(" + projection.scale + ")translate(" + projection.translate + ")")
                     .attr("transform", "scale(" + tiles.scale + ")translate(" + tiles.translate + ")")
                 .selectAll("image")
                     .data(tiles, function(d) { return d; });
@@ -330,6 +362,7 @@ ggjs.Renderer = (function (d3) {
                 .attr("y", function(d) { return d[1]; });
         }
         zoomed();
+        */
     };
 
     prototype.drawLineLayer = function (plotArea, layerDef) {
@@ -520,6 +553,27 @@ ggjs.Renderer = (function (d3) {
         //            d[yField],
         //            d[xField]
         //          ]) + ")"; });
+
+        var vector2 = svg.append("g");
+            //.attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")");
+            //.style("stroke-width", 1 / zoom.scale());
+
+        vector2.selectAll("circle")
+            .data(values)
+            .enter().append("circle")
+                // .attr("cx", function (d) { console.log(projection(d)); return projection(d)[0]; })
+                // .attr("cy", function (d) { return projection(d)[1]; })
+                .attr("transform", function(d) {return "translate(" + projection([ +d[yField], +d[xField] ]) + ")";})
+                .attr("r", 5)// / zoom.scale())
+                .attr("fill", "rgba(255,0,0,0.6)")
+                .attr(dataAttrXField, xField)
+                .attr(dataAttrXValue, function (d) { return d[xField]; })
+                .attr(dataAttrYField, yField)
+                .attr(dataAttrYValue, function (d) { return d[yField]; });
+
+
+        /*
+        ORIG Version - working with old zoomed tiles
         var vector2 = svg.append("g")
             .attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")");
             //.style("stroke-width", 1 / zoom.scale());
@@ -536,7 +590,8 @@ ggjs.Renderer = (function (d3) {
                 .attr(dataAttrXValue, function (d) { return d[xField]; })
                 .attr(dataAttrYField, yField)
                 .attr(dataAttrYValue, function (d) { return d[yField]; });
-                
+        */
+
         // var coordinates = projection([mylon, mylat]);
         // plotArea.selectAll(".circle")
         //      .data(values)
@@ -697,6 +752,40 @@ ggjs.Renderer = (function (d3) {
                 .attr("class", "ggjs-arc")
                 .attr("d", arc);
         return bars;
+    };
+
+    prototype.drawGeoJSONLayer = function (plotArea, layerDef) {
+        // Draws GeoJSON layer onto the plot area
+        var plotDef = this.plotDef(),
+            aesmappings = layerDef.aesmappings(),
+            fillAesMap = aesmappings.findByAes("fill"),
+            xField = aesmappings.findByAes("x").field(),
+            yField = aesmappings.findByAes("y").field(),
+            xScale = this.xAxis().scale(),
+            yScale = this.yAxis().scale(),
+            datasetName = layerDef.data(),
+            dataset = this.getDataset(datasetName),
+            projection = this.geo.projection,
+            zoom = this.geo.zoom,
+            // plot = this.renderer.plot,
+            output, values;
+
+        values = dataset.values();
+
+        switch (plotDef.coord()) {
+            case "mercator":
+                // bars = this.drawCartesianBars(plotArea, values, xField, yField, xScale, yScale, yAxisHeight, isStacked);
+                output = ggjs.geomGeoJSON.drawGeoJSONLayer(plotArea, values, aesmappings, 
+                    xField, yField, 
+                    xScale, yScale,
+                    projection, zoom);
+                break;
+            default:
+                throw new Error("Don't know how to draw GeoJSON for co-ordinate system " + plotDef.coord());
+        }
+
+        // this.applyFillColour(bars, aesmappings);
+        
     };
 
     prototype.applyFillColour = function (svgItems, aesmappings) {

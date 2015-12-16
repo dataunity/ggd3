@@ -31,6 +31,7 @@
                 <option value="map">Map</option>
                 <option value="line">Line</option>
                 <option value="timeseries">Time Series</option>
+                <option value="geojson">Map GeoJSON</option>
             </select>
         </div>
         <div id="chart"></div>
@@ -321,6 +322,44 @@
                             ]
                         };
                         break;
+                    case "geojson":
+                        return {
+                            "selector": "#chart",
+                            "coord": "mercator",
+                            // "width": 500,
+                            "height": 400,
+                            // "padding": {"left":30, "top":10, "bottom":30, "right":10},
+                            "data": [
+                                {
+                                    "name": "geojson",
+                                    "url": "data/CTYUA_DEC_2014_EW_BFE_WSG84_EPSG4326.geojson",
+                                    "contentType": "application/vnd.geo+json"
+                                }
+                            ],
+                            "scales": [
+                                {"name": "x", "type": "linear"},
+                                {"name": "y", "type": "linear"},
+                                {"name": "color", "type": "category10"},
+                            ],
+                            "axes": [
+                                {"type": "x", "scaleName": "x"},
+                                {"type": "y", "scaleName": "y"}
+                            ],
+                            "layers": [
+                                {
+                                    "aesmappings": [
+                                        {aes: "x", field: "sepalWidth"},
+                                        {aes: "y", field: "sepalLength"},
+                                        {aes: "fill", field: "species", scaleName: "color"}
+                                    ],
+                                    "data": "geojson",
+                                    "geom": {"geomType": "GeomGeoJSON"},
+                                    "stat": null,
+                                    "posadj": null
+                                }
+                            ]
+                        };
+                        break;
 
                     default:
                         return null;
@@ -354,7 +393,7 @@
                 });
             });
 
-            drawChart("bar");
+            drawChart("map");
         </script>
     </body>
 </html>

@@ -15,6 +15,7 @@ module.exports = function (grunt) {
                     'src/padding.js',
                     'src/aesmappings.js',
                     'src/geom.js',
+                    'src/geomgeojson.js',
                     'src/layers.js',
                     'src/plot.js',
                     'src/renderer.js',
