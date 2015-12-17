@@ -1,8 +1,8 @@
 // Helper for drawing GeoJSON layers
 ggjs.geomGeoJSON = (function (d3) {
     // TODO: Simplify function signature so it takes render object and layer def
-    var drawGeoJSONLayer = function (plotArea, values, aesmappings, xField, yField, xScale, yScale,
-            projection, zoom) {
+    var drawGeoJSONLayer = function (svgElem, values, aesmappings, xField, yField, xScale, yScale,
+            projection, path, zoom) {
             // Draws GeoJSON onto the plot area
 
             // Working projection for UK
@@ -15,9 +15,9 @@ ggjs.geomGeoJSON = (function (d3) {
             //     .center([0, 51])
             //     .scale(900)
             //     .rotate([0, 0]);
-            var path = d3.geo.path()
-                    .projection(projection),
-                svg = plotArea;
+            // var path = d3.geo.path()
+            //         .projection(projection),
+            //     svg = plotArea;
 
 
             console.log("drawing geojson layer.");
@@ -25,13 +25,13 @@ ggjs.geomGeoJSON = (function (d3) {
 
             // TODO: Only draws FeatureCollection at the moment
             // TODO: Check the geojson type
-            svg.append("g")
+            svgElem.append("g")
                     .attr("class", "counties")
                 .selectAll("path")
                     .data(values.features)
                 .enter().append("path")
                     // .attr("class", function(d) { return quantize(rateById.get(d.id)); })
-                    .attr("fill", "gray")
+                    .attr("fill", "rgba(0,0,0,0.2)")
                     .attr("stroke", "black")
                     .attr("stroke-width", "1")
                     .attr("d", path);
@@ -49,6 +49,16 @@ ggjs.geomGeoJSON = (function (d3) {
             //         .attr(dataAttrXValue, function (d) { return d[xField]; })
             //         .attr(dataAttrYField, yField)
             //         .attr(dataAttrYValue, function (d) { return d[yField]; });
+            var zoomedRedraw = function () {
+                // Function to redraw content when zoom/pan changes. See zoomed function
+                // in renderer.
+                // TODO: limit so only this layer's paths are redrawn
+                console.log("GeoJSON zoomed.");
+                svgElem.selectAll("path")
+                    .attr("d", path);
+            };
+
+            return zoomedRedraw;
         };
     return {
         drawGeoJSONLayer: drawGeoJSONLayer

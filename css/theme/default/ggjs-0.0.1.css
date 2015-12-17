@@ -30,3 +30,9 @@
 	/*width: 256px;
 	height: 256px;*/
 }
+
+/* Overlay layer to accept geo zoom events */
+.ggjs-geo-overlay {
+	fill: none;
+	pointer-events: all;
+}

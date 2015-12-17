@@ -670,8 +670,8 @@ ggjs.geom = function (s) {
 // Helper for drawing GeoJSON layers
 ggjs.geomGeoJSON = (function (d3) {
     // TODO: Simplify function signature so it takes render object and layer def
-    var drawGeoJSONLayer = function (plotArea, values, aesmappings, xField, yField, xScale, yScale,
-            projection, zoom) {
+    var drawGeoJSONLayer = function (svgElem, values, aesmappings, xField, yField, xScale, yScale,
+            projection, path, zoom) {
             // Draws GeoJSON onto the plot area
 
             // Working projection for UK
@@ -684,9 +684,9 @@ ggjs.geomGeoJSON = (function (d3) {
             //     .center([0, 51])
             //     .scale(900)
             //     .rotate([0, 0]);
-            var path = d3.geo.path()
-                    .projection(projection),
-                svg = plotArea;
+            // var path = d3.geo.path()
+            //         .projection(projection),
+            //     svg = plotArea;
 
 
             console.log("drawing geojson layer.");
@@ -694,13 +694,13 @@ ggjs.geomGeoJSON = (function (d3) {
 
             // TODO: Only draws FeatureCollection at the moment
             // TODO: Check the geojson type
-            svg.append("g")
+            svgElem.append("g")
                     .attr("class", "counties")
                 .selectAll("path")
                     .data(values.features)
                 .enter().append("path")
                     // .attr("class", function(d) { return quantize(rateById.get(d.id)); })
-                    .attr("fill", "gray")
+                    .attr("fill", "rgba(0,0,0,0.2)")
                     .attr("stroke", "black")
                     .attr("stroke-width", "1")
                     .attr("d", path);
@@ -718,6 +718,16 @@ ggjs.geomGeoJSON = (function (d3) {
             //         .attr(dataAttrXValue, function (d) { return d[xField]; })
             //         .attr(dataAttrYField, yField)
             //         .attr(dataAttrYValue, function (d) { return d[yField]; });
+            var zoomedRedraw = function () {
+                // Function to redraw content when zoom/pan changes. See zoomed function
+                // in renderer.
+                // TODO: limit so only this layer's paths are redrawn
+                console.log("GeoJSON zoomed.");
+                svgElem.selectAll("path")
+                    .attr("d", path);
+            };
+
+            return zoomedRedraw;
         };
     return {
         drawGeoJSONLayer: drawGeoJSONLayer
@@ -1187,13 +1197,24 @@ ggjs.Renderer = (function (d3) {
         //var center = projection([-100, 40]);  // US
         //var center = projection([-106, 37.5]);    // US
         //var center = projection([-10, 55]);   // UK
-        var center = projection([-0.1046, 51.46]);  // Lambeth
-
+        var scale0 = (width - 1) / 2 / Math.PI;
         var zoom = d3.behavior.zoom()
-            .scale(projection.scale() * 2 * Math.PI)
-            .scaleExtent([1 << 11, 1 << 14])
-            .translate([width - center[0], height - center[1]])
-            .on("zoom", this_.drawLayers);
+            .translate([width / 2, height / 2])
+            .scale(scale0)
+            .scaleExtent([scale0, 8 * scale0])
+            .on("zoom", zoomed);
+
+        var path = d3.geo.path()
+            .projection(projection);
+
+        // var center = projection([-0.1046, 51.46]);  // Lambeth
+
+        // var zoom = d3.behavior.zoom()
+        //     .scale(projection.scale() * 2 * Math.PI)
+        //     .scaleExtent([1 << 11, 1 << 14])
+        //     .translate([width - center[0], height - center[1]])
+        //     .on("zoom", this_.drawLayers);
+
             //.on("zoom", this_.drawLayers(this_.renderer.plot));
             //.on("zoom", zoomed);
 
@@ -1206,6 +1227,42 @@ ggjs.Renderer = (function (d3) {
         //     .translate([0, 0]);
 
         this.geo.projection = projection;
+        this.geo.path = path;
+
+        // Share the svg group between geo layers so the same zoom
+        // settings can be applied to all layers
+        var plotElem = this.renderer.plot;
+
+        plotElem.append("rect")
+            .attr("class", "ggjs-geo-overlay")
+            .attr("width", width)
+            .attr("height", height);
+        
+        this.geo.svgGroup = plotElem.append("g");
+        this.geo.zoomRedrawFunctions = [];
+        var g = this.geo.svgGroup;
+
+        function zoomed() {
+            console.log("zoomed");
+            console.log("projection", projection);
+            // console.log("g", g);
+            console.log("this_.geo.svgGroup", this_.geo.svgGroup);
+            console.log("this_.geo", this_.geo);
+            projection
+                .translate(zoom.translate())
+                .scale(zoom.scale());
+
+            this_.geo.zoomRedrawFunctions.forEach(function (redrawFunction) {
+                redrawFunction();
+            });
+
+            // g.selectAll("path")
+            //     .attr("d", path);
+        }
+
+        plotElem
+            .call(zoom)
+            .call(zoom.event);
     };
 
     // prototype.zoomed = function () {
@@ -1319,7 +1376,8 @@ ggjs.Renderer = (function (d3) {
             height = plotDef.plotAreaHeight(),
             zoom = this.geo.zoom,
             projection = this.geo.projection,
-            plot = this.renderer.plot;
+            svgElem = this.geo.svgGroup;
+            // plot = this.renderer.plot;
 
         //var width = Math.max(960, window.innerWidth),
         //  height = Math.max(500, window.innerHeight);
@@ -1332,7 +1390,7 @@ ggjs.Renderer = (function (d3) {
 
         var tiles = tile();
 
-        plot.append("g").selectAll("image")
+        svgElem.append("g").selectAll("image")
                 .data(tiles)
             .enter().append("image")
                 .attr("xlink:href", function(d) { return "http://" + ["a", "b", "c"][Math.random() * 3 | 0] + ".tile.openstreetmap.org/" + d[2] + "/" + d[0] + "/" + d[1] + ".png"; })
@@ -1341,7 +1399,27 @@ ggjs.Renderer = (function (d3) {
                 .attr("x", function(d) { return Math.round((d[0] + tiles.translate[0]) * tiles.scale); })
                 .attr("y", function(d) { return Math.round((d[1] + tiles.translate[1]) * tiles.scale); });
 
+        var zoomedRedraw = function () {
+            // Function to redraw content when zoom/pan changes. See zoomed function
+            // in renderer.
+            var tile = d3.geo.tile()
+                .scale(projection.scale() * tau)
+                .translate(projection([0, 0]))
+                .size([width, height]);
 
+            var tiles = tile();
+            
+            console.log("GeoJSON zoomed.");
+            // TODO: limit so only this layers images are redrawn
+            svgElem.selectAll("image")
+                .attr("xlink:href", function(d) { return "http://" + ["a", "b", "c"][Math.random() * 3 | 0] + ".tile.openstreetmap.org/" + d[2] + "/" + d[0] + "/" + d[1] + ".png"; })
+                .attr("width", Math.round(tiles.scale))
+                .attr("height", Math.round(tiles.scale))
+                .attr("x", function(d) { return Math.round((d[0] + tiles.translate[0]) * tiles.scale); })
+                .attr("y", function(d) { return Math.round((d[1] + tiles.translate[1]) * tiles.scale); });
+        };
+
+        this.geo.zoomRedrawFunctions.push(zoomedRedraw);
 
         // OLD VERSION BELOW
         /*
@@ -1784,6 +1862,8 @@ ggjs.Renderer = (function (d3) {
             dataset = this.getDataset(datasetName),
             projection = this.geo.projection,
             zoom = this.geo.zoom,
+            geoElem = this.geo.svgGroup,
+            path = this.geo.path,
             // plot = this.renderer.plot,
             output, values;
 
@@ -1792,10 +1872,11 @@ ggjs.Renderer = (function (d3) {
         switch (plotDef.coord()) {
             case "mercator":
                 // bars = this.drawCartesianBars(plotArea, values, xField, yField, xScale, yScale, yAxisHeight, isStacked);
-                output = ggjs.geomGeoJSON.drawGeoJSONLayer(plotArea, values, aesmappings, 
+                output = ggjs.geomGeoJSON.drawGeoJSONLayer(geoElem, values, aesmappings, 
                     xField, yField, 
                     xScale, yScale,
-                    projection, zoom);
+                    projection, path, zoom);
+                this.geo.zoomRedrawFunctions.push(output);
                 break;
             default:
                 throw new Error("Don't know how to draw GeoJSON for co-ordinate system " + plotDef.coord());

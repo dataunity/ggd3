@@ -347,6 +347,12 @@
                             ],
                             "layers": [
                                 {
+                                    "data": null,
+                                    "geom": {"geomType": "GeomGeoTiles"},
+                                    "stat": null,
+                                    "posadj": null
+                                },
+                                {
                                     "aesmappings": [
                                         {aes: "x", field: "sepalWidth"},
                                         {aes: "y", field: "sepalLength"},
@@ -393,7 +399,7 @@
                 });
             });
 
-            drawChart("map");
+            drawChart("geojson");
         </script>
     </body>
 </html>
