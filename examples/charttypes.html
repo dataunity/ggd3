@@ -5,17 +5,62 @@
         <link href="css/site.css" rel="stylesheet" />
         <link href="../css/theme/default/ggjs-0.0.1.css" rel="stylesheet" />
 
+        <link rel="stylesheet" type="text/css" href="../lib/leaflet/leaflet.css">
+
         <!-- ToDo: remove this dependency or package into ggjs (see ggjs.renderer.render() method) -->
         <script src="../lib/queue.v1.min.js"></script>
 
         <script src="../lib/d3.js" charset="utf-8"></script>
         <script src="../lib/d3.geo.tile.v0.min.js"></script>
         <script src="../lib/topojson.v1.min.js"></script>
+        <script src="../lib/leaflet/leaflet.js"></script>
         <script src="../build/ggjs.js" charset="utf-8"></script>
         <!--<script src="../ggjs-0.0.1.js" charset="utf-8"></script>-->
 
         <!-- JQuery: only used to help with this page, not needed for ggjs -->
         <script src="lib/jquery-1.11.1.js" charset="utf-8"></script>
+
+        <style type="text/css">
+            /*#chart {
+              width: 960px;
+              height: 500px;
+            }*/
+        </style>
+
+        <style>
+
+            /*@import url(//cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.5/leaflet.css);*/
+            /*@import url(../style.css?aea6f0a);*/
+
+            .ggjs-geo-geojson-path {
+                fill: #000;
+                fill-opacity: .2;
+                stroke: #fff;
+                stroke-width: 1.5px;
+            }
+
+            /*#map {
+              width: 960px;
+              height: 500px;
+            }
+
+            svg {
+              position: relative;
+            }
+
+            path {
+              fill: #000;
+              fill-opacity: .2;
+              stroke: #fff;
+              stroke-width: 1.5px;
+            }
+
+            path:hover {
+              fill: brown;
+              fill-opacity: .7;
+            }*/
+
+        </style>
     </head>
     <body>
         <h1>Chart types</h1>
@@ -332,7 +377,8 @@
                             "data": [
                                 {
                                     "name": "geojson",
-                                    "url": "data/CTYUA_DEC_2014_EW_BFE_WSG84_EPSG4326.geojson",
+                                    // "url": "data/CTYUA_DEC_2014_EW_BFE_WSG84_EPSG4326.geojson",
+                                    "url": "data/us-states.json",
                                     "contentType": "application/vnd.geo+json"
                                 }
                             ],
@@ -400,6 +446,12 @@
             });
 
             drawChart("geojson");
+            // drawChart("bar");
+            // var map = new L.Map("chart", {center: [37.8, -96.9], zoom: 4})
+            //     .addLayer(new L.TileLayer("http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"));
         </script>
+
+
+
     </body>
 </html>

@@ -18,6 +18,9 @@ module.exports = function (grunt) {
                     'src/geomgeojson.js',
                     'src/layers.js',
                     'src/plot.js',
+                    'src/layerrenderer-plugins.js',
+                    'src/layerrenderer-leaflet.js',
+                    'src/renderer-leaflet.js',
                     'src/renderer.js',
                     'src/datahelper.js',
                     'src/post.js'],
@@ -57,7 +60,8 @@ module.exports = function (grunt) {
                             // baseUrl: 'src/'
                             baseUrl: 'build/',
                             paths: {
-                                'd3': '../lib/d3'
+                                'd3': '../lib/d3',
+                                'L': '../lib/leaflet/leaflet'
                             }
                         }
                     }

@@ -119,6 +119,20 @@ define(['../../lib/d3.js', 'ggjs'], function(d3, ggjs) {
 			expect(typeof ggjs.Renderer).toEqual("function");
 		});
 
+		it("should find the Leaflet Renderer constructor", function () {
+			expect(typeof ggjs.LeafletRenderer).toEqual("function");
+		});
+
+		it("should find the renderer layer plugins module", function () {
+			expect(typeof ggjs.layerRendererPlugins).toEqual("object");
+		});
+
+		it("should have a layer renderer for mercator GeomGeoTiles", function () {
+			var renderer = ggjs.layerRendererPlugins.getLayerRenderer("mercator", "GeomGeoTiles");
+			console.log(renderer);
+			expect(renderer).not.toBe(null);
+		});
+
 		it("should find the renderer constructor", function () {
 			expect(typeof ggjs.renderer).toEqual("function");
 		});

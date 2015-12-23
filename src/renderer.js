@@ -1,3 +1,5 @@
+
+
 ggjs.Renderer = (function (d3) {
     var renderer = function (plotDef) {
         this.renderer = {
@@ -74,6 +76,7 @@ ggjs.Renderer = (function (d3) {
     prototype.render = function () {
         var this_ = this;
         // Clear contents (so they disapper in the event of failed data load)
+        console.log("TODO: switch content remove to new renderer");
         d3.select(this.plotDef().selector()).select("svg").remove();
         // Fetch data then render plot
         this.fetchData(function () { this_.renderPlot(); });
@@ -242,34 +245,83 @@ ggjs.Renderer = (function (d3) {
     //  console.log("Some zooming");
     // }
 
-    prototype.renderPlot = function () {
-        var plotDef = this.plotDef(),
-            plot;
-
-        // d3.select(this.plotDef().selector()).select("svg").remove();
+    // TODO: Move all SVG code to separate renderer module
+    prototype.svgRenderer = function (plotDef) {
+        var plot;
         d3.select(plotDef.selector()).html("");
         plot = d3.select(plotDef.selector())
             .append("svg")
                 .attr("width", plotDef.width())
                 .attr("height", plotDef.height());
+        console.log("svgRenderer", this);
         this.renderer.plot = plot;
+
+        return {
+            buildScales: this.buildScales,
+            setupXAxis: this.setupXAxis,
+            setupYAxis: this.setupYAxis,
+            setupGeo: this.setupGeo,
+            drawAxes: this.drawAxes,
+            drawLayers: this.drawLayers,
+            drawLegends: this.drawLegends
+        };
+    };
+
+    prototype.renderPlot = function () {
+        var plotDef = this.plotDef(),
+            renderer,
+            plot;
+
+        if (plotDef.coord() === "mercator") {
+            renderer = new ggjs.LeafletRenderer(plotDef);
+
+            console.log("renderer", renderer);
+
+            renderer.buildScales();
+            renderer.setupXAxis();
+            renderer.setupYAxis();
+            // renderer.setupGeo();
+
+            renderer.drawAxes();
+            renderer.drawLayers();
+            
+            renderer.drawLegends();
+        } else {
+            // TODO: Change to constructor
+            renderer = this.svgRenderer(plotDef);
+            // d3.select(this.plotDef().selector()).select("svg").remove();
+            d3.select(plotDef.selector()).html("");
+            plot = d3.select(plotDef.selector())
+                .append("svg")
+                    .attr("width", plotDef.width())
+                    .attr("height", plotDef.height());
+            this.renderer.plot = plot;
+
+            // ToDo: if no domain set on axes, default to extent
+            // of data for appropriate aes across layers
+            this.buildScales();
+            this.setupXAxis();
+            this.setupYAxis();
+            this.setupGeo();
+
+            this.drawAxes();
+            this.drawLayers();
+            
+            this.drawLegends();
+        }
+
+        
+
+        /* Pre renderer module code
+        
 
         console.log(plotDef.plotAreaX());
         console.log(plotDef.plotAreaY());
         console.log(plotDef.plotAreaHeight());
         console.log(plotDef.plotAreaWidth());
 
-        // ToDo: if no domain set on axes, default to extent
-        // of data for appropriate aes across layers
-        this.buildScales();
-        this.setupXAxis();
-        this.setupYAxis();
-        this.setupGeo();
-
-        this.drawAxes();
-        this.drawLayers();
         
-        this.drawLegends();
+        */
     };
 
     prototype.drawLayers = function () {
@@ -279,6 +331,7 @@ ggjs.Renderer = (function (d3) {
             i, layerDef, plotArea;
 
         // Setup layers
+        // TODO: move this setup work up to renderPlot()
         switch (plotDef.coord()) {
             case "cartesian":
                 plotArea = plot.append("g")
@@ -372,6 +425,16 @@ ggjs.Renderer = (function (d3) {
                 .attr("x", function(d) { return Math.round((d[0] + tiles.translate[0]) * tiles.scale); })
                 .attr("y", function(d) { return Math.round((d[1] + tiles.translate[1]) * tiles.scale); });
 
+        // svgElem.append("g").selectAll("image")
+        //         .data(tiles)
+        //     .enter().append("image")
+        //         .attr("xlink:href", function(d) { return "http://" + ["a", "b", "c", "d"][Math.random() * 4 | 0] + ".tiles.mapbox.com/v3/mapbox.natural-earth-2/" + d[2] + "/" + d[0] + "/" + d[1] + ".png"; })
+        //         .attr("width", Math.round(tiles.scale))
+        //         .attr("height", Math.round(tiles.scale))
+        //         .attr("x", function(d) { return Math.round((d[0] + tiles.translate[0]) * tiles.scale); })
+        //         .attr("y", function(d) { return Math.round((d[1] + tiles.translate[1]) * tiles.scale); });
+        var mapTiles = svgElem.append("g");
+
         var zoomedRedraw = function () {
             // Function to redraw content when zoom/pan changes. See zoomed function
             // in renderer.
@@ -390,6 +453,20 @@ ggjs.Renderer = (function (d3) {
                 .attr("height", Math.round(tiles.scale))
                 .attr("x", function(d) { return Math.round((d[0] + tiles.translate[0]) * tiles.scale); })
                 .attr("y", function(d) { return Math.round((d[1] + tiles.translate[1]) * tiles.scale); });
+            // mapTiles.selectAll("image")
+            //         .data(tiles)
+            //     .enter().append("image")
+            //         .attr("xlink:href", function(d) { return "http://" + ["a", "b", "c", "d"][Math.random() * 4 | 0] + ".tiles.mapbox.com/v3/mapbox.natural-earth-2/" + d[2] + "/" + d[0] + "/" + d[1] + ".png"; })
+            //         .attr("width", Math.round(tiles.scale))
+            //         .attr("height", Math.round(tiles.scale))
+            //         .attr("x", function(d) { return Math.round((d[0] + tiles.translate[0]) * tiles.scale); })
+            //         .attr("y", function(d) { return Math.round((d[1] + tiles.translate[1]) * tiles.scale); });
+            // svgElem.selectAll("image")
+            //     .attr("xlink:href", function(d) { return "http://" + ["a", "b", "c", "d"][Math.random() * 4 | 0] + ".tiles.mapbox.com/v3/mapbox.natural-earth-2/" + d[2] + "/" + d[0] + "/" + d[1] + ".png"; })
+            //     .attr("width", Math.round(tiles.scale))
+            //     .attr("height", Math.round(tiles.scale))
+            //     .attr("x", function(d) { return Math.round((d[0] + tiles.translate[0]) * tiles.scale); })
+            //     .attr("y", function(d) { return Math.round((d[1] + tiles.translate[1]) * tiles.scale); });
         };
 
         this.geo.zoomRedrawFunctions.push(zoomedRedraw);

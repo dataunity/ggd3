@@ -6,17 +6,19 @@
 
         if ( hasDefine ){ 
             // AMD Module
-            define(['d3'], factory);
+            define(['d3', 'L'], factory);
         } else if ( hasExports ) { 
             // Node.js Module
-            module.exports = factory(require(['d3']));
+            module.exports = factory(require(['d3', 'L']));
         } else { 
             // Assign to common namespaces or simply the global object (window)
-            global.ggjs = factory(d3);
+            global.ggjs = factory(d3, L);
         }
-})(typeof window !== "undefined" ? window : this, function (d3) {
-    'use strict';
+})(typeof window !== "undefined" ? window : this, function (d3, L) {
+    console.log("Put strict mode back in");
+    //'use strict';
     var ggjs = {};
+    console.log("leaflet", L);
 
 ggjs.util = (function () {
     var isUndefined = function (val) {
@@ -1025,6 +1027,377 @@ ggjs.plot = function(p) {
     return new ggjs.Plot(p);
 };
 
+// Create a registration system for plot layer renderers
+ggjs.layerRendererPlugins = (function () {
+    var layerRendererPlugins = {},
+        createKey = function (coord, geom) {
+            return coord + "_" + geom;
+        },
+        addLayerRenderer = function (coord, geom, renderer) {
+            // Adds a new layer renderer that can draw a plot layer
+            var key = createKey(coord, geom);
+            layerRendererPlugins[key] = renderer;
+        },
+        getLayerRenderer = function (coord, geom) {
+            // Gets a layer renderer that can draw a plot layer
+            var key = createKey(coord, geom),
+                renderer = layerRendererPlugins[key];
+            return renderer || null;
+        };
+    return {
+        addLayerRenderer: addLayerRenderer,
+        getLayerRenderer: getLayerRenderer
+    };
+}());
+// Registers a plugin that can render a plot layer for Leaflet map tiles
+(function (L, layerRendererPlugins) {
+    var onAdd = function (map) {
+            // Add new layer
+            map.addLayer(new L.TileLayer("http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"));
+        },
+        onRemove = function (map) {
+            throw new Error("Not implemented.");
+        },
+        renderer = {
+            onAdd: onAdd,
+            onRemove: onRemove
+        },
+        registerLayerRenderer = function (renderer) {
+            var coord = "mercator",
+                geom = "GeomGeoTiles";
+            layerRendererPlugins.addLayerRenderer(coord, geom, renderer);
+        };
+
+    // Register plugin
+    registerLayerRenderer(renderer);
+}(L, ggjs.layerRendererPlugins));
+
+// Registers a plugin that can render a plot layer for Leaflet GeoJSON
+(function (L, d3, layerRendererPlugins) {
+    // Create a class that implements the Layer interface
+    var D3Layer = L.Class.extend({
+
+            initialize: function(data) {
+                this._data = data;
+            },
+
+            onAdd: function(map) {
+                var collection = this._data;
+                var svg = d3.select(map.getPanes().overlayPane).append("svg"),
+                g = svg.append("g").attr("class", "leaflet-zoom-hide");
+
+            var transform = d3.geo.transform({point: projectPoint}),
+                  path = d3.geo.path().projection(transform);
+
+              var feature = g.selectAll("path.ggjs-geo-geojson-path")
+                  .data(collection.features)
+                .enter().append("path")
+                    .attr("class", "ggjs-geo-geojson-path");
+
+              map.on("viewreset", reset);
+              reset();
+
+              // Reposition the SVG to cover the features.
+              function reset() {
+                var bounds = path.bounds(collection),
+                    topLeft = bounds[0],
+                    bottomRight = bounds[1];
+
+                svg .attr("width", bottomRight[0] - topLeft[0])
+                    .attr("height", bottomRight[1] - topLeft[1])
+                    .style("left", topLeft[0] + "px")
+                    .style("top", topLeft[1] + "px");
+
+                g   .attr("transform", "translate(" + -topLeft[0] + "," + -topLeft[1] + ")");
+
+                feature.attr("d", path);
+              }
+
+              // Use Leaflet to implement a D3 geometric transformation.
+              function projectPoint(x, y) {
+                var point = map.latLngToLayerPoint(new L.LatLng(y, x));
+                this.stream.point(point.x, point.y);
+              }
+
+                /*
+
+                // Create SVG elements under the overlay pane
+                var div = d3.select(map.getPanes().overlayPane),
+                    svg = div.selectAll('svg.point').data(this._data);
+
+                // Stores the latitude and longitude of each city
+                this._data.forEach(function(d) {
+                    d.LatLng = new L.LatLng(d.coordinates[0], d.coordinates[1]);
+                });
+
+                // Create a scale for the population
+                var rScale = d3.scale.sqrt()
+                    .domain([0, d3.max(this._data, function(d) { return d.population; })])
+                    .range([0, 35]);
+
+                // Append the SVG containers for the bubbles
+                svg.enter().append('svg')
+                    .attr('width', function(d) { return 2 * rScale(d.population); })
+                    .attr('height', function(d) { return 2 * rScale(d.population); })
+                    .attr('class', 'point leaflet-zoom-hide')
+                    .style('position', 'absolute');
+
+                // Append the bubbles (finally!)
+                svg.append('circle')
+                    .attr('cx', function(d) { return rScale(d.population); })
+                    .attr('cy', function(d) { return rScale(d.population); })
+                    .attr('r', function(d) { return rScale(d.population); })
+                    .attr('class', 'city')
+                    .on('mouseover', function(d) {
+                        d3.select(this).classed('highlight', true);
+                    })
+                    .on('mouseout', function(d) {
+                        d3.select(this).classed('highlight', false);
+                    });
+
+
+                function updateBubbles() {
+                    svg
+                        .style('left', function(d) {
+                            var dx = map.latLngToLayerPoint(d.LatLng).x;
+                            return (dx - rScale(d.population)) + 'px';
+                        })
+                        .style('top', function(d) {
+                            var dy = map.latLngToLayerPoint(d.LatLng).y;
+                            return (dy - rScale(d.population)) + 'px';
+                        });
+                }
+
+                map.on('viewreset', updateBubbles);
+                updateBubbles();
+
+                */
+            },
+
+            onRemove: function(map) {
+                // var div = d3.select(map.getPanes().overlayPane);
+                // div.selectAll('svg.point').remove();
+            }
+        });
+    var onAdd = function (map, values) {
+            // Create a layer with data
+            map.addLayer(new D3Layer(values));
+            
+            /*
+            var svg = d3.select(map.getPanes().overlayPane).append("svg"),
+                g = svg.append("g").attr("class", "leaflet-zoom-hide");
+
+            var transform = d3.geo.transform({point: projectPoint}),
+                  path = d3.geo.path().projection(transform);
+
+              var feature = g.selectAll("path")
+                  .data(collection.features)
+                .enter().append("path");
+
+              map.on("viewreset", reset);
+              reset();
+
+              // Reposition the SVG to cover the features.
+              function reset() {
+                var bounds = path.bounds(collection),
+                    topLeft = bounds[0],
+                    bottomRight = bounds[1];
+
+                svg .attr("width", bottomRight[0] - topLeft[0])
+                    .attr("height", bottomRight[1] - topLeft[1])
+                    .style("left", topLeft[0] + "px")
+                    .style("top", topLeft[1] + "px");
+
+                g   .attr("transform", "translate(" + -topLeft[0] + "," + -topLeft[1] + ")");
+
+                feature.attr("d", path);
+              }
+
+              // Use Leaflet to implement a D3 geometric transformation.
+              function projectPoint(x, y) {
+                var point = map.latLngToLayerPoint(new L.LatLng(y, x));
+                this.stream.point(point.x, point.y);
+              }
+              */
+        },
+        onRemove = function (map) {
+            throw new Error("Not implemented.");
+        },
+        renderer = {
+            onAdd: onAdd,
+            onRemove: onRemove
+        },
+        registerLayerRenderer = function (renderer) {
+            var coord = "mercator",
+                geom = "GeomGeoJSON";
+            console.log("Registering renderer", coord, geom);
+            layerRendererPlugins.addLayerRenderer(coord, geom, renderer);
+        };
+
+    // Register plugin
+    registerLayerRenderer(renderer);
+}(L, d3, ggjs.layerRendererPlugins));
+// Leaflet map renderer
+ggjs.LeafletRenderer = (function (d3, layerRendererPlugins) {
+    var leafletRenderer = function (plotDef) {
+        this._plotDef = plotDef;
+
+        var width = plotDef.width(),
+            height = plotDef.height(),
+            parentWidth;
+        if (typeof width === 'undefined' || width === null) {
+            // Set width to parent container width
+            try {
+                parentWidth = d3.select(plotDef.selector()).node().offsetWidth;
+            } catch (err) {
+                throw new Error("Couldn't find the width of the parent element."); 
+            }
+            if (typeof parentWidth === 'undefined' || parentWidth === null) {
+                throw new Error("Couldn't find the width of the parent element.");
+            }
+            this._plotDef.width(parentWidth);
+        }
+
+        if (typeof height === 'undefined' || height === null) {
+            // Set width to parent container width
+            // try {
+            //     parentWidth = d3.select(plotDef.selector()).node().offsetWidth;
+            // } catch (err) {
+            //     throw new Error("Couldn't find the width of the parent element."); 
+            // }
+            // if (typeof parentWidth === 'undefined' || parentWidth === null) {
+            //     throw new Error("Couldn't find the width of the parent element.");
+            // }
+            this._plotDef.height(500);
+        }
+
+        // Set height/width of div (needed for Leaflet)
+        console.log("height", this._plotDef.height());
+        console.log("width", this._plotDef.width());
+        d3.select(plotDef.selector())
+           .style("height", this._plotDef.height() + "px")
+           .style("width", this._plotDef.width() + "px");
+
+        if (!plotDef.selector() || typeof plotDef.selector() !== "string" || plotDef.selector()[0] !== "#") {
+            throw new Error("Expected plot def html selector to be an id");
+        }
+
+        // TODO: find better way to assign map to html element
+
+        console.log("selector", plotDef.selector().substring(1));
+        var selector = plotDef.selector().substring(1),
+            // map = new L.Map(selector, {center: [51, 0], zoom: 4}); // UK
+            map = new L.Map(selector, {center: [37.8, -96.9], zoom: 4}); // US
+        this._map = map;
+    };
+
+    var prototype = leafletRenderer.prototype;
+
+    prototype.plotDef = function (val) {
+        if (!arguments.length) return this._plotDef;
+        this._plotDef = val;
+        return this;
+    };
+
+    prototype.remove = function () {
+    };
+
+    prototype.buildScales = function () {
+    };
+
+    prototype.setupXAxis = function () {
+    };
+
+    prototype.setupYAxis = function () {
+    };
+
+    prototype.drawAxes = function () {
+    };
+
+    prototype.drawLayers = function () {
+        // TODO: let parent renderer calling draw layers?
+        var plotDef = this.plotDef(),
+            coords = plotDef.coord(),
+            // plot = this.renderer.plot,
+            map = this._map,
+            layerDefs = plotDef.layers().asArray(),
+            i, layerDef, plotArea, layerRenderer, geom;
+
+        // Draw each layer
+        for (i = 0; i < layerDefs.length; i++) {
+            layerDef = layerDefs[i];
+
+            var datasetName = layerDef.data(),
+                dataset = this.getDataset(datasetName),
+                values = dataset.values();
+
+            geom = layerDef.geom().geomType();
+            layerRenderer = layerRendererPlugins.getLayerRenderer(coords, geom);
+            if (layerRenderer === null) {
+                throw new Error("Couldn't find layer renderer for " + coords + ", " + geom);
+            }
+
+            layerRenderer.onAdd(map, values);
+
+            /*
+
+            switch (layerDef.geom().geomType()) {
+                case "GeomPoint":
+                    this.drawPointLayer(plotArea, layerDef);
+                    break;
+                case "GeomBar":
+                    this.drawBarLayer(plotArea, layerDef);
+                    break;
+                case "GeomText":
+                    this.drawTextLayer(plotArea, layerDef);
+                    break;
+                case "GeomLine":
+                    this.drawLineLayer(plotArea, layerDef);
+                    break;
+                case "GeomPath":
+                    this.drawPathLayer(plotArea, layerDef);
+                    break;
+                case "GeomGeoTiles":
+                    this.drawMapTiles(plotArea, layerDef);
+                    break;
+                case "GeomGeoJSON":
+                    this.drawGeoJSONLayer(plotArea, layerDef);
+                    break;
+                default:
+                    throw new Error("Cannot draw layer, geom type not supported: " + layerDef.geom().geomType());
+            }
+            */
+        }
+    };
+
+    prototype.drawLegends = function () {
+    };
+
+    // TODO: This is copied from orig renderer. Put in base class?
+    prototype.getDataset = function (datasetName) {
+        var plotDef = this.plotDef(),
+            dataset = plotDef.data().dataset(datasetName),
+            datasetNames;
+        if (dataset === null || typeof dataset === "undefined") {
+            // Use default dataset for the plot
+            datasetNames = plotDef.data().names();
+            if (datasetNames.length !== 1) {
+                throw new Error("Expected one DataSet in the Plot to use as the default DataSet");
+            }
+            datasetName = datasetNames[0];
+            dataset = plotDef.data().dataset(datasetName);
+
+            if (dataset === null) {
+                throw new Error("Couldn't find a layer DataSet or a default DataSet.");
+            }
+        }
+        return dataset;
+    };
+
+    return leafletRenderer;
+}(d3, ggjs.layerRendererPlugins));
+
+
 ggjs.Renderer = (function (d3) {
     var renderer = function (plotDef) {
         this.renderer = {
@@ -1101,6 +1474,7 @@ ggjs.Renderer = (function (d3) {
     prototype.render = function () {
         var this_ = this;
         // Clear contents (so they disapper in the event of failed data load)
+        console.log("TODO: switch content remove to new renderer");
         d3.select(this.plotDef().selector()).select("svg").remove();
         // Fetch data then render plot
         this.fetchData(function () { this_.renderPlot(); });
@@ -1269,34 +1643,83 @@ ggjs.Renderer = (function (d3) {
     //  console.log("Some zooming");
     // }
 
-    prototype.renderPlot = function () {
-        var plotDef = this.plotDef(),
-            plot;
-
-        // d3.select(this.plotDef().selector()).select("svg").remove();
+    // TODO: Move all SVG code to separate renderer module
+    prototype.svgRenderer = function (plotDef) {
+        var plot;
         d3.select(plotDef.selector()).html("");
         plot = d3.select(plotDef.selector())
             .append("svg")
                 .attr("width", plotDef.width())
                 .attr("height", plotDef.height());
+        console.log("svgRenderer", this);
         this.renderer.plot = plot;
+
+        return {
+            buildScales: this.buildScales,
+            setupXAxis: this.setupXAxis,
+            setupYAxis: this.setupYAxis,
+            setupGeo: this.setupGeo,
+            drawAxes: this.drawAxes,
+            drawLayers: this.drawLayers,
+            drawLegends: this.drawLegends
+        };
+    };
+
+    prototype.renderPlot = function () {
+        var plotDef = this.plotDef(),
+            renderer,
+            plot;
+
+        if (plotDef.coord() === "mercator") {
+            renderer = new ggjs.LeafletRenderer(plotDef);
+
+            console.log("renderer", renderer);
+
+            renderer.buildScales();
+            renderer.setupXAxis();
+            renderer.setupYAxis();
+            // renderer.setupGeo();
+
+            renderer.drawAxes();
+            renderer.drawLayers();
+            
+            renderer.drawLegends();
+        } else {
+            // TODO: Change to constructor
+            renderer = this.svgRenderer(plotDef);
+            // d3.select(this.plotDef().selector()).select("svg").remove();
+            d3.select(plotDef.selector()).html("");
+            plot = d3.select(plotDef.selector())
+                .append("svg")
+                    .attr("width", plotDef.width())
+                    .attr("height", plotDef.height());
+            this.renderer.plot = plot;
+
+            // ToDo: if no domain set on axes, default to extent
+            // of data for appropriate aes across layers
+            this.buildScales();
+            this.setupXAxis();
+            this.setupYAxis();
+            this.setupGeo();
+
+            this.drawAxes();
+            this.drawLayers();
+            
+            this.drawLegends();
+        }
+
+        
+
+        /* Pre renderer module code
+        
 
         console.log(plotDef.plotAreaX());
         console.log(plotDef.plotAreaY());
         console.log(plotDef.plotAreaHeight());
         console.log(plotDef.plotAreaWidth());
 
-        // ToDo: if no domain set on axes, default to extent
-        // of data for appropriate aes across layers
-        this.buildScales();
-        this.setupXAxis();
-        this.setupYAxis();
-        this.setupGeo();
-
-        this.drawAxes();
-        this.drawLayers();
         
-        this.drawLegends();
+        */
     };
 
     prototype.drawLayers = function () {
@@ -1306,6 +1729,7 @@ ggjs.Renderer = (function (d3) {
             i, layerDef, plotArea;
 
         // Setup layers
+        // TODO: move this setup work up to renderPlot()
         switch (plotDef.coord()) {
             case "cartesian":
                 plotArea = plot.append("g")
@@ -1399,6 +1823,16 @@ ggjs.Renderer = (function (d3) {
                 .attr("x", function(d) { return Math.round((d[0] + tiles.translate[0]) * tiles.scale); })
                 .attr("y", function(d) { return Math.round((d[1] + tiles.translate[1]) * tiles.scale); });
 
+        // svgElem.append("g").selectAll("image")
+        //         .data(tiles)
+        //     .enter().append("image")
+        //         .attr("xlink:href", function(d) { return "http://" + ["a", "b", "c", "d"][Math.random() * 4 | 0] + ".tiles.mapbox.com/v3/mapbox.natural-earth-2/" + d[2] + "/" + d[0] + "/" + d[1] + ".png"; })
+        //         .attr("width", Math.round(tiles.scale))
+        //         .attr("height", Math.round(tiles.scale))
+        //         .attr("x", function(d) { return Math.round((d[0] + tiles.translate[0]) * tiles.scale); })
+        //         .attr("y", function(d) { return Math.round((d[1] + tiles.translate[1]) * tiles.scale); });
+        var mapTiles = svgElem.append("g");
+
         var zoomedRedraw = function () {
             // Function to redraw content when zoom/pan changes. See zoomed function
             // in renderer.
@@ -1417,6 +1851,20 @@ ggjs.Renderer = (function (d3) {
                 .attr("height", Math.round(tiles.scale))
                 .attr("x", function(d) { return Math.round((d[0] + tiles.translate[0]) * tiles.scale); })
                 .attr("y", function(d) { return Math.round((d[1] + tiles.translate[1]) * tiles.scale); });
+            // mapTiles.selectAll("image")
+            //         .data(tiles)
+            //     .enter().append("image")
+            //         .attr("xlink:href", function(d) { return "http://" + ["a", "b", "c", "d"][Math.random() * 4 | 0] + ".tiles.mapbox.com/v3/mapbox.natural-earth-2/" + d[2] + "/" + d[0] + "/" + d[1] + ".png"; })
+            //         .attr("width", Math.round(tiles.scale))
+            //         .attr("height", Math.round(tiles.scale))
+            //         .attr("x", function(d) { return Math.round((d[0] + tiles.translate[0]) * tiles.scale); })
+            //         .attr("y", function(d) { return Math.round((d[1] + tiles.translate[1]) * tiles.scale); });
+            // svgElem.selectAll("image")
+            //     .attr("xlink:href", function(d) { return "http://" + ["a", "b", "c", "d"][Math.random() * 4 | 0] + ".tiles.mapbox.com/v3/mapbox.natural-earth-2/" + d[2] + "/" + d[0] + "/" + d[1] + ".png"; })
+            //     .attr("width", Math.round(tiles.scale))
+            //     .attr("height", Math.round(tiles.scale))
+            //     .attr("x", function(d) { return Math.round((d[0] + tiles.translate[0]) * tiles.scale); })
+            //     .attr("y", function(d) { return Math.round((d[1] + tiles.translate[1]) * tiles.scale); });
         };
 
         this.geo.zoomRedrawFunctions.push(zoomedRedraw);
