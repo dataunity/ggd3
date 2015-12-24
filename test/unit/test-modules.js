@@ -2,6 +2,7 @@ define(['../../lib/d3.js', 'ggjs'], function(d3, ggjs) {
 	describe("Test modules", function() {
 		// Checks that all the ggjs modules are present in the ggjs
 		// namespace. Other tests check the details of mocules.
+		var rendererTypeLeaflet = "leaflet";
 
 		it("should find the util module", function () {
 			expect(typeof ggjs.util).toEqual("object");
@@ -127,9 +128,15 @@ define(['../../lib/d3.js', 'ggjs'], function(d3, ggjs) {
 			expect(typeof ggjs.layerRendererPlugins).toEqual("object");
 		});
 
-		it("should have a layer renderer for mercator GeomGeoTiles", function () {
-			var renderer = ggjs.layerRendererPlugins.getLayerRenderer("mercator", "GeomGeoTiles");
-			console.log(renderer);
+		it("should have a layer renderer for Leaflet mercator GeomGeoTiles", function () {
+			var renderer = ggjs.layerRendererPlugins.getLayerRenderer(rendererTypeLeaflet, 
+				"mercator", "GeomGeoTiles");
+			expect(renderer).not.toBe(null);
+		});
+
+		it("should have a layer renderer for Leaflet mercator GeomPoint", function () {
+			var renderer = ggjs.layerRendererPlugins.getLayerRenderer(rendererTypeLeaflet, 
+				"mercator", "GeomPoint");
 			expect(renderer).not.toBe(null);
 		});
 

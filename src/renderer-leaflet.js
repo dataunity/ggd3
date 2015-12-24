@@ -5,7 +5,7 @@ ggjs.LeafletRenderer = (function (d3, layerRendererPlugins) {
         var width = plotDef.width(),
             height = plotDef.height(),
             parentWidth, elem, mapElem;
-        
+
         if (typeof width === 'undefined' || width === null) {
             // Set width to parent container width
             try {
@@ -40,6 +40,10 @@ ggjs.LeafletRenderer = (function (d3, layerRendererPlugins) {
         return this;
     };
 
+    prototype.rendererType = function () {
+        return "leaflet";
+    };
+
     prototype.remove = function () {
     };
 
@@ -62,7 +66,7 @@ ggjs.LeafletRenderer = (function (d3, layerRendererPlugins) {
             // plot = this.renderer.plot,
             map = this._map,
             layerDefs = plotDef.layers().asArray(),
-            i, layerDef, plotArea, layerRenderer, geom;
+            i, layerDef, plotArea, layerRenderer, layerRendererConstr, geom;
 
         // Draw each layer
         for (i = 0; i < layerDefs.length; i++) {
@@ -73,12 +77,17 @@ ggjs.LeafletRenderer = (function (d3, layerRendererPlugins) {
                 values = dataset.values();
 
             geom = layerDef.geom().geomType();
-            layerRenderer = layerRendererPlugins.getLayerRenderer(coords, geom);
-            if (layerRenderer === null) {
-                throw new Error("Couldn't find layer renderer for " + coords + ", " + geom);
+            layerRendererConstr = layerRendererPlugins.getLayerRenderer(this.rendererType(), coords, geom);
+            if (layerRendererConstr === null) {
+                throw new Error("Couldn't find layer renderer for " + this.rendererType() + 
+                    ", " + coords + ", " + geom);
             }
 
-            layerRenderer.onAdd(map, values);
+            // var plotSettings = {getDataset: this.getDataset};
+            var plotSettings = this;
+            layerRenderer = new layerRendererConstr(plotSettings, layerDef);
+
+            layerRenderer.onAdd(map);
 
             /*
 

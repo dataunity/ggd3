@@ -1,17 +1,17 @@
 // Create a registration system for plot layer renderers
 ggjs.layerRendererPlugins = (function () {
     var layerRendererPlugins = {},
-        createKey = function (coord, geom) {
-            return coord + "_" + geom;
+        createKey = function (rendererType, coord, geom) {
+            return rendererType + "_" + coord + "_" + geom;
         },
-        addLayerRenderer = function (coord, geom, renderer) {
+        addLayerRenderer = function (rendererType, coord, geom, renderer) {
             // Adds a new layer renderer that can draw a plot layer
-            var key = createKey(coord, geom);
+            var key = createKey(rendererType, coord, geom);
             layerRendererPlugins[key] = renderer;
         },
-        getLayerRenderer = function (coord, geom) {
+        getLayerRenderer = function (rendererType, coord, geom) {
             // Gets a layer renderer that can draw a plot layer
-            var key = createKey(coord, geom),
+            var key = createKey(rendererType, coord, geom),
                 renderer = layerRendererPlugins[key];
             return renderer || null;
         };

@@ -29,6 +29,11 @@
 
         <style>
 
+            .city {
+                fill: #4ECDC4;
+                fill-opacity: 0.3;
+            }
+
             /*@import url(//cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.5/leaflet.css);*/
             /*@import url(../style.css?aea6f0a);*/
 
@@ -440,10 +445,9 @@
                 });
             });
 
-            drawChart("geojson");
+            // drawChart("geojson");
+            drawChart("map");
             // drawChart("bar");
-            // var map = new L.Map("chart", {center: [37.8, -96.9], zoom: 4})
-            //     .addLayer(new L.TileLayer("http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"));
         </script>
 
 
