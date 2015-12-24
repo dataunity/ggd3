@@ -17,11 +17,19 @@
 	font: 12px sans-serif;
 }
 
+/* Old? Not used anymore? */
 .ggjs-path-map {
 	fill: none;
 	stroke: red;
 	stroke-linejoin: round;
 	stroke-width: 1.5px;
+}
+
+.ggjs-geo-geojson-path {
+    fill: #000;
+    fill-opacity: .2;
+    stroke: #fff;
+    stroke-width: 1.5px;
 }
 
 .ggjs-tile {

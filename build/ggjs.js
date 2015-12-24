@@ -1241,10 +1241,10 @@ ggjs.layerRendererPlugins = (function () {
 ggjs.LeafletRenderer = (function (d3, layerRendererPlugins) {
     var leafletRenderer = function (plotDef) {
         this._plotDef = plotDef;
-
         var width = plotDef.width(),
             height = plotDef.height(),
-            parentWidth;
+            parentWidth, elem, mapElem;
+        
         if (typeof width === 'undefined' || width === null) {
             // Set width to parent container width
             try {
@@ -1259,36 +1259,16 @@ ggjs.LeafletRenderer = (function (d3, layerRendererPlugins) {
         }
 
         if (typeof height === 'undefined' || height === null) {
-            // Set width to parent container width
-            // try {
-            //     parentWidth = d3.select(plotDef.selector()).node().offsetWidth;
-            // } catch (err) {
-            //     throw new Error("Couldn't find the width of the parent element."); 
-            // }
-            // if (typeof parentWidth === 'undefined' || parentWidth === null) {
-            //     throw new Error("Couldn't find the width of the parent element.");
-            // }
             this._plotDef.height(500);
         }
 
         // Set height/width of div (needed for Leaflet)
-        console.log("height", this._plotDef.height());
-        console.log("width", this._plotDef.width());
-        d3.select(plotDef.selector())
-           .style("height", this._plotDef.height() + "px")
-           .style("width", this._plotDef.width() + "px");
+        elem = d3.select(plotDef.selector());
+        mapElem = elem.append("div")
+            .style("height", this._plotDef.height() + "px")
+            .style("width", this._plotDef.width() + "px");
 
-        if (!plotDef.selector() || typeof plotDef.selector() !== "string" || plotDef.selector()[0] !== "#") {
-            throw new Error("Expected plot def html selector to be an id");
-        }
-
-        // TODO: find better way to assign map to html element
-
-        console.log("selector", plotDef.selector().substring(1));
-        var selector = plotDef.selector().substring(1),
-            // map = new L.Map(selector, {center: [51, 0], zoom: 4}); // UK
-            map = new L.Map(selector, {center: [37.8, -96.9], zoom: 4}); // US
-        this._map = map;
+        this._map = new L.Map(mapElem.node(), {center: [37.8, -96.9], zoom: 4}); // US
     };
 
     var prototype = leafletRenderer.prototype;
