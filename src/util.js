@@ -147,7 +147,8 @@ ggjs.util = (function () {
         countObjKeys: countObjKeys,
         deepCopy: deepCopy,
         toBoolean: toBoolean,
-        isPlainObject: isPlainObject
+        isPlainObject: isPlainObject,
+        extend: extend
     };
 })();
 

@@ -20,6 +20,8 @@ module.exports = function (grunt) {
                     'src/plot.js',
                     'src/layerrenderer-plugins.js',
                     'src/layerrenderer-leaflet.js',
+                    'src/renderer-base.js',
+                    'src/renderer-svg.js',
                     'src/renderer-leaflet.js',
                     'src/renderer.js',
                     'src/datahelper.js',

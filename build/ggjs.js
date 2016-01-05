@@ -15,10 +15,9 @@
             global.ggjs = factory(d3, L);
         }
 })(typeof window !== "undefined" ? window : this, function (d3, L) {
+    // 'use strict';
     console.log("Put strict mode back in");
-    //'use strict';
     var ggjs = {};
-    console.log("leaflet", L);
 
 ggjs.util = (function () {
     var isUndefined = function (val) {
@@ -169,7 +168,8 @@ ggjs.util = (function () {
         countObjKeys: countObjKeys,
         deepCopy: deepCopy,
         toBoolean: toBoolean,
-        isPlainObject: isPlainObject
+        isPlainObject: isPlainObject,
+        extend: extend
     };
 })();
 
@@ -1427,18 +1427,622 @@ ggjs.layerRendererPlugins = (function () {
     registerLayerRenderer(layerRenderer);
     // registerLayerRenderer(renderer);
 }(L, d3, ggjs.layerRendererPlugins));
-// Leaflet map renderer
-ggjs.LeafletRenderer = (function (d3, layerRendererPlugins) {
-    var leafletRenderer = function (plotDef) {
-        this._plotDef = plotDef;
-        var width = plotDef.width(),
-            height = plotDef.height(),
-            parentWidth, elem, mapElem;
+// Base 'class' for plot renderers
+ggjs.RendererBase = (function () {
+    var baseRenderer = function () {
+    };
 
+    var prototype = baseRenderer.prototype;
+
+    prototype.plotDef = function (val) {
+        if (!arguments.length) return this._plotDef;
+        this._plotDef = val;
+        return this;
+    };
+
+    prototype.scaleDef = function (scaleName) {
+        return this.plotDef().scales().scale(scaleName);
+    };
+
+    prototype.buildScales = function () {
+        throw new Error("Override in sub class.");
+    };
+
+    prototype.setupXAxis = function () {
+        throw new Error("Override in sub class.");
+    };
+
+    prototype.setupYAxis = function () {
+        throw new Error("Override in sub class.");
+    };
+
+    prototype.drawAxes = function () {
+        throw new Error("Override in sub class.");
+    };
+
+    prototype.drawLayers = function () {
+        throw new Error("Override in sub class.");
+    };
+
+    prototype.drawLegends = function () {
+        throw new Error("Override in sub class.");
+    };
+
+    // ------------
+    // Data ranges
+    // ------------
+
+    prototype.getDataset = function (datasetName) {
+        var plotDef = this.plotDef(),
+            dataset = plotDef.data().dataset(datasetName),
+            datasetNames;
+        if (dataset === null || typeof dataset === "undefined") {
+            // Use default dataset for the plot
+            datasetNames = plotDef.data().names();
+            if (datasetNames.length !== 1) {
+                throw new Error("Expected one DataSet in the Plot to use as the default DataSet");
+            }
+            datasetName = datasetNames[0];
+            dataset = plotDef.data().dataset(datasetName);
+
+            if (dataset === null) {
+                throw new Error("Couldn't find a layer DataSet or a default DataSet.");
+            }
+        }
+        return dataset;
+    };
+
+    prototype.statAcrossLayers = function (aes, stat) {
+        // Looks at the data across all layers for an
+        // aesthetic and gets info about it (e.g. max or min)
+        var plotDef = this.plotDef(),
+            layers = plotDef.layers().asArray(),
+            statVal = null,
+            i, layer, aesmap, field, tmpStat,
+            datasetName, dataset;
+
+        for (i = 0; i < layers.length; i++) {
+            layer = layers[i];
+            aesmap = layer.aesmappings().findByAes(aes);
+
+            // Layer data
+            datasetName = layer.data();
+            if (!datasetName) {
+                datasetName = plotDef.defaultDatasetName();
+            }
+            //dataset = plotDef.data().dataset(datasetName);
+            dataset = this.getDataset(datasetName);
+            if (dataset === null) {
+                throw new Error("Unable to find dataset with name " + datasetName);
+            }
+
+            if (aesmap) {
+                field = aesmap.field();
+                if (stat === "max" && layer.useStackedData()) {
+                    // Stack data
+                    tmpStat = this.layerStackedDataMax(layer, dataset, aes);
+                } else {
+                    // Normal case for finding aes value
+                    tmpStat = ggjs.dataHelper.datatableStat(dataset.values(), field, stat);
+                }
+                if (!isNaN(tmpStat)) {
+                    if (statVal === null) statVal = tmpStat;
+                    statVal = stat === "min" ? Math.min(statVal, tmpStat) : Math.max(statVal, tmpStat);
+                }
+            }
+        }
+
+        return statVal;
+    };
+
+    prototype.layerStackedDataMax = function (layer, dataset, aes) {
+        // Find the max value for the stacked data on this level.
+        // Highest value for stacked data is sum of values in group, 
+        // not the highest value across the whole value column
+        var tmpStat,
+            xAes = layer.aesmappings().findByAes("x"), 
+            fillAes = layer.aesmappings().findByAes("fill"),
+            valueAes = layer.aesmappings().findByAes(aes);
+
+        if (valueAes === null) {
+            throw new Error("Need value aes map to find stacked value");
+        }
+        if (xAes === null) {
+            throw new Error("Need x aes map to find stacked value");
+        }
+        if (fillAes === null) {
+            throw new Error("Need fill aes map to find stacked value");
+        }
+
+        if (aes === "y") {
+            // ToDo: is the fill aes the only way to specify stacked figures?
+            tmpStat = ggjs.dataHelper.maxStackValue(dataset.values(), 
+                xAes.field(), fillAes.field(), valueAes.field());
+        } else {
+            throw new Error("Don't know how to find stacked value for value aes " + aes);
+        }
+
+        return tmpStat;
+    };
+
+    prototype.allValuesForLayer = function (layer, aesmap) {
+        // Gets all data values for an aes in a layer
+        var plotDef = this.plotDef(),
+            values = [],
+            //tmpVals, 
+            i, field,
+            datasetName, dataset;
+
+        // Layer data
+        datasetName = layer.data();
+        if (!datasetName) {
+            datasetName = plotDef.defaultDatasetName();
+        }
+        dataset = this.getDataset(datasetName);
+        if (dataset === null) {
+            throw new Error("Unable to find dataset with name " + datasetName);
+        }
+
+        if (aesmap) {
+            field = aesmap.field();
+            
+            if (dataset.values().map) {
+                values = dataset.values().map(function (d) { return d[field]; });
+            } else {
+                // backup way to get values from data
+                // ToDo: use array.map polyfill so this can be removed?
+                var dsVals = dataset.values(),
+                    j;
+                this.warning("Old browser - doesn't support array.map");
+                for (j = 0; j < dsVals.length; j++) {
+                    values.push(dsVals[j][field]);
+                }
+            }
+            // values = d3.merge([ values, tmpVals ]);
+        }
+
+        return values;
+    };
+
+    prototype.allValuesAcrossLayers = function (aes) {
+        // Looks at the data across all layers for an
+        // aesthetic and gets all it's values
+        var plotDef = this.plotDef(),
+            layers = plotDef.layers().asArray(),
+            values = [],
+            tmpVals, i, layer, aesmap, field,
+            datasetName, dataset;
+
+        for (i = 0; i < layers.length; i++) {
+            layer = layers[i];
+            aesmap = layer.aesmappings().findByAes(aes);
+
+            tmpVals = this.allValuesForLayer(layer, aesmap);
+            values = values.concat(tmpVals);
+            // values = d3.merge([ values, tmpVals ]);
+
+            // // Layer data
+            // datasetName = layer.data();
+            // if (!datasetName) {
+            //  datasetName = plotDef.defaultDatasetName();
+            // }
+            // //dataset = plotDef.data().dataset(datasetName);
+            // dataset = this.getDataset(datasetName);
+            // if (dataset == null) {
+            //  throw "Unable to find dataset with name " + datasetName;
+            // }
+
+            // if (aesmap) {
+            //  field = aesmap.field();
+                
+            //  if (dataset.values().map) {
+            //      tmpVals = dataset.values().map(function (d) { return d[field]; });
+            //  } else {
+            //      // backup way to get values from data
+            //      // ToDo: use array.map polyfill so this can be removed?
+            //      var tmpVals = [],
+            //          dsVals = dataset.values(),
+            //          j;
+            //      this.warning("Old browser - doesn't support array.map");
+            //      for (j = 0; j < dsVals.length; j++) {
+            //          tmpVals.push(dsVals[j][field]);
+            //      }
+            //  }
+            //  values = d3.merge([ values, tmpVals ]);
+            // }
+        }
+
+        return values;
+    };
+
+    return baseRenderer;
+}());
+
+
+// Base 'class' for D3 renderers
+ggjs.D3RendererBase = (function (d3) {
+    var d3RendererBase = function () {
+    };
+
+    // 'Inherit' base class prototype
+    var prototype = ggjs.util.extend(d3RendererBase.prototype, ggjs.RendererBase.prototype);
+
+
+
+    // -------
+    // Scales
+    // -------
+
+    prototype.d3Scale = function (scaleName, val) {
+        if (!arguments.length) {
+            throw new Error("Must supply args when getting/setting d3 scale");
+        }
+
+        // if (ggjs.util.isUndefined(this._scaleNameToD3Scale)) {
+        //     this._scaleNameToD3Scale = {};
+        // }
+
+        else if (arguments.length === 1) {
+            return this._scaleNameToD3Scale[scaleName];
+            // return this.renderer.scaleNameToD3Scale[scaleName];
+        } else {
+            this._scaleNameToD3Scale[scaleName] = val;
+            // this.renderer.scaleNameToD3Scale[scaleName] = val;
+        }
+        
+        return this;
+    };
+
+    prototype.setupAxisScale = function (aes, scale, scaleDef) {
+        var min = 0,
+            max,
+            allValues = [];
+
+        
+        if (scaleDef.hasDomain()) {
+            scale.domain(scaleDef.domain());
+        } else {
+            // If scale domain hasn't been set, use data to find it
+            if (scaleDef.isQuantitative()) {
+                max = this.statAcrossLayers(aes, "max");
+                if (!isNaN(max)) {
+                    scale.domain([0, max]).nice();
+                }
+            } else if (scaleDef.isOrdinal()) {
+                allValues = this.allValuesAcrossLayers(aes);
+                scale.domain(allValues);
+                //scale.domain(data.map(function(d) { return d.letter; }));
+            } else if (scaleDef.isTime()) {
+                min = this.statAcrossLayers(aes, "min");
+                max = this.statAcrossLayers(aes, "max");
+                if (isNaN(min)) {
+                    min = new Date(1970, 0, 1);
+                }
+                if (isNaN(max)) {
+                    max = new Date(Date.now());
+                }
+                scale.domain([min, max]).nice();
+            }
+        }
+        
+    };
+
+    prototype.buildScales = function () {
+        var plotDef = this.plotDef(),
+            layerDefs = plotDef.layers().asArray(),
+            i, j,
+            // scaleNamesLookup = {},
+            // scaleNames = [],
+            scaleNameToLayerInfos = {},
+            // scaleNameToLayer = {},
+            // scaleNameToAesMap = {},
+            scaleDef,
+            layerInfo,
+            layerInfos,
+            layerDef,
+            tmpScale,
+            values,
+            tmpVals,
+            min, max,
+            aesmappings, aesmapping, aes, scaleName, scale;
+
+        // Find names of all the scales used
+        for (i = 0; i < layerDefs.length; i++) {
+            layerDef = layerDefs[i];
+            aesmappings = layerDef.aesmappings().asArray();
+
+            // console.log("aesmappings", aesmappings)
+            if (aesmappings) {
+                for (j = 0; j < aesmappings.length; j++) {
+                    aesmapping = aesmappings[j];
+                    // console.log(aesmapping)
+                    aes = aesmapping.aes();
+                    // Skip aesthetics which are already display as axis
+                    // if (aes === "x" || aes === "y") {
+                    //  continue;
+                    // }
+                    scaleName = aesmapping.scaleName();
+                    if (scaleName === null) {
+                        continue;
+                    }
+                    // Store the information about where scale is used
+                    layerInfo = {
+                        layerDef: layerDef,
+                        aesmapping: aesmapping
+                    };
+                    if (typeof scaleNameToLayerInfos[scaleName] === 'undefined') {
+                        scaleNameToLayerInfos[scaleName] = [layerInfo];
+                    } else {
+                        scaleNameToLayerInfos[scaleName].push(layerInfo);
+                    }
+                    
+                    // scaleNameToLayer[scaleName] = layer;
+                    // scaleNameToAesMap[scaleName] = aesmapping;
+                    // console.log("aesmapping", aes, scaleName);
+                    // if (scaleName != null && typeof scaleNamesLookup[scaleName] === 'undefined') {
+                    //  scaleNames.push(scaleName);
+                    //  scaleNamesLookup[scaleName] = true;
+                    // }
+                }
+            }
+        }
+
+        // Create a D3 scale for each scale
+        // console.log("Creating d3 scales")
+        for (scaleName in scaleNameToLayerInfos) {
+            scaleDef = plotDef.scales().scale(scaleName);
+            scale = this.scale(scaleDef);
+            if (scaleDef.hasDomain()) {
+                scale.domain(scaleDef.domain());
+            } else {
+                // If scale domain hasn't been set, use data to find it
+                if (scaleDef.isQuantitative()) {
+                    max = this.statAcrossLayers(aes, "max");
+                    if (!isNaN(max)) {
+                        scale.domain([0, max]).nice();
+                    }
+                } else if (scaleDef.isOrdinal()) {
+                    // Find values across all layers
+                    layerInfos = scaleNameToLayerInfos[scaleName];
+                    values = [];
+                    // console.log("scaleName", scaleName)
+                    for (i = 0; i < layerInfos.length; i++) {
+                        layerInfo = layerInfos[i];
+                        layerDef = layerInfo.layerDef;
+                        aesmapping = layerInfo.aesmapping;
+                        // ToDo: cache values for layer/field combos
+                        // console.log("layer info", scaleName, layerDef.data(), aesmapping.aes(), aesmapping.field());
+                        tmpVals = this.allValuesForLayer(layerDef, aesmapping);
+                        values = d3.merge([ values, tmpVals ]);
+                    }
+                    scale.domain(values);
+                } else if (scaleDef.isTime()) {
+                    // min = this.statAcrossLayers(aes, "min");
+                    // max = this.statAcrossLayers(aes, "max");
+                    // if (!isNaN(max)) {
+                    //  scale.domain([0, max]).nice();
+                    // }
+                    console.log("setting time scale domain");
+                    min = new Date(2014);
+                    max = new Date(2016);
+                    scale.domain([min, max]).nice();
+                }
+            }
+            
+            this.d3Scale(scaleName, scale);
+        }
+    };
+
+    prototype.scale = function (scaleDef) {
+        // Produces D3 scale from ggjs scale definition
+        var scale = null;
+        scaleDef = scaleDef || ggjs.scale({});
+        switch (scaleDef.type()) {
+            case "linear":
+                scale = d3.scale.linear();
+                break;
+            case "ordinal":
+                scale = d3.scale.ordinal();
+                break;
+            case "pow":
+                scale = d3.scale.pow();
+                break;
+            case "time":
+                scale = d3.time.scale();
+                break;
+            case "category10":
+                scale = d3.scale.category10();
+                break;
+            default:
+                throw new Error("Unknow D3 scale type " + scaleDef.type());
+        }
+
+        if (scale === null) {
+            scale = d3.scale.linear();
+        }
+
+        return scale;
+    };
+
+
+    // -----
+    // Axes
+    // -----
+
+    prototype.setupXAxis = function () {
+        // Produces D3 x axis
+        var plotDef = this.plotDef(),
+            axis = d3.svg.axis()
+                .orient("bottom"),
+            axisDef = this.plotDef().axes().axis("x") || {},
+            scaleRef = axisDef.scaleName(),
+            scaleDef = plotDef.scales().scale(scaleRef),
+            scale = this.scale(scaleDef);
+
+        // ToDo: determine if domain has been manually set on x axis
+        // ToDo: account for facets
+        //x.domain(d3.extent(data, function(d) { return d.sepalWidth; })).nice();
+
+        // Set scale range
+        // ToDo: account for facets
+        switch (plotDef.coord()) {
+            case "cartesian":
+                // X scale range is always width of plot area
+                scale.range([0, plotDef.plotAreaWidth()]);
+                if (scaleDef.isOrdinal()) {
+                    scale.rangeRoundBands([0, plotDef.plotAreaWidth()], 0.1);
+                }
+                break;
+            case "polar":
+                scale.range([0, 2 * Math.PI]);
+                if (scaleDef.isOrdinal()) {
+                    scale.rangeBands([0, 2 * Math.PI], 0);
+                }
+                break;
+            case "mercator":
+                console.log("ToDo: set up geo axis");
+                break;
+            default:
+                throw new Error("Don't know how to set axis range for co-ordinate type " + plotDef.coord());
+        }
+
+        this.setupAxisScale("x", scale, scaleDef);
+        axis.scale(scale);
+
+        axis.ticks(5);
+
+        this.xAxisScaleDef(scaleDef);
+        this.xAxis(axis);
+    };
+
+    prototype.setupYAxis = function () {
+        // Produces D3 y axis
+        var plotDef = this.plotDef(),
+            axis = d3.svg.axis()
+                .orient("left"),
+            axisDef = this.plotDef().axes().axis("y") || {},
+            scaleRef = axisDef.scaleName(),
+            scaleDef = plotDef.scales().scale(scaleRef),
+            scale = this.scale(scaleDef);
+
+        // ToDo: determine if domain has been manually set on y axis
+        // ToDo: account for facets
+        //y.domain(d3.extent(data, function(d) { return d.sepalLength; })).nice();
+        
+        // ToDo: account for facets
+        switch (plotDef.coord()) {
+            case "cartesian":
+                // Y scale range is height of plot area
+                scale.range([plotDef.plotAreaHeight(), 0]);
+                break;
+            case "polar":
+                // Y scale range is half height of plot area
+                scale.range([Math.floor(plotDef.plotAreaHeight() / 2), 0]);
+                break;
+            case "mercator":
+                console.log("ToDo: set up geo axis");
+                break;
+            default:
+                throw new Error("Don't know how to set axis range for co-ordinate type " + plotDef.coord());
+        }
+
+        this.setupAxisScale("y", scale, scaleDef);
+        axis.scale(scale);
+
+        axis.ticks(5);
+
+        this.yAxisScaleDef(scaleDef);
+        this.yAxis(axis);
+    };
+
+    prototype.xAxis = function (val) {
+        if (!arguments.length) return this._xAxis;
+        this._xAxis = val;
+        return this;
+    };
+
+    prototype.yAxis = function (val) {
+        if (!arguments.length) return this._yAxis;
+        this._yAxis = val;
+        return this;
+    };
+
+    prototype.xAxisScaleDef = function (val) {
+        if (!arguments.length) return this._xAxisScaleDef;
+        this._xAxisScaleDef = val;
+        return this;
+    };
+
+    prototype.yAxisScaleDef = function (val) {
+        if (!arguments.length) return this._yAxisScaleDef;
+        this._yAxisScaleDef = val;
+        return this;
+    };
+
+
+    // --------
+    // Styling
+    // --------
+
+    prototype.defaultFillColor = function (val) {
+        if (!arguments.length) return this._defaultFillColor;
+        this._defaultFillColor = val;
+        return this;
+    };
+
+    prototype.applyFillColour = function (svgItems, aesmappings) {
+        // Applies fill colour to svg elements
+        // Params:
+        //  svgItems: the svg elements as D3 select list
+        //  aesmappings: the layer's aesmappings
+
+        // Fill colour
+        // ToDo: setup colour scale across all layers, so colours
+        // are matched across layers
+        console.log("Warning: move colour mapping to all levels.");
+        var plotDef = this.plotDef(),
+            fillAesMap = aesmappings.findByAes("fill"),
+            defaultFillColor = this.defaultFillColor();
+        if (fillAesMap !== null) {
+            var colorField = fillAesMap.field(),
+                colorScaleDef = this.scaleDef(fillAesMap.scaleName()),
+                scaleName = fillAesMap.scaleName(),
+                colorScale;
+            // if (colorScaleDef == null) {
+            //  this.warning("Couldn't set colour on layer - fill colour scale missing.")
+            //  svgItems.style("fill", function(d) { return defaultFillColor; });
+            // } else {
+            //  colorScale = this.scale(colorScaleDef);
+            //  svgItems.style("fill", function(d) { return colorScale(d[colorField]); });
+            // }
+            
+            if (scaleName === null) {
+                this.warning("Couldn't set colour on layer - fill colour scale missing.");
+                svgItems.style("fill", function(d) { return defaultFillColor; });
+            } else {
+                colorScale = this.d3Scale(scaleName);
+                console.log("Using d3 scale", scaleName, colorScale.domain());
+                svgItems.style("fill", function(d) { return colorScale(d[colorField]); });
+            }   
+        } else {
+            svgItems.style("fill", function(d) { return defaultFillColor; });
+        }
+    };
+
+    return d3RendererBase;
+}(d3));
+// SVG renderer
+ggjs.SVGRenderer = (function (d3, layerRendererPlugins) {
+    var svgRenderer = function (plotDef) {
+        this._plotDef = plotDef;
+
+        // Width: autoset width if width is missing
+        var width = this._plotDef.width(),
+            parentWidth;
         if (typeof width === 'undefined' || width === null) {
             // Set width to parent container width
             try {
-                parentWidth = d3.select(plotDef.selector()).node().offsetWidth;
+                parentWidth = d3.select(this._plotDef.selector()).node().offsetWidth;
             } catch (err) {
                 throw new Error("Couldn't find the width of the parent element."); 
             }
@@ -1448,47 +2052,160 @@ ggjs.LeafletRenderer = (function (d3, layerRendererPlugins) {
             this._plotDef.width(parentWidth);
         }
 
-        if (typeof height === 'undefined' || height === null) {
-            this._plotDef.height(500);
-        }
+        // Set up hidden properties for base class methods
+        // TODO: better to inherit these properties from base class
+        this._xAxis = null;
+        this._yAxis = null;
+        this._xAxisScaleDef = null;
+        this._yAxisScaleDef = null;
+        this._scaleNameToD3Scale = {};
+        this._defaultFillColor = "rgb(31, 119, 180)";
 
-        // Set height/width of div (needed for Leaflet)
-        elem = d3.select(plotDef.selector());
-        mapElem = elem.append("div")
-            .style("height", this._plotDef.height() + "px")
-            .style("width", this._plotDef.width() + "px");
+        // Names of data attributes which appear on SVG elements
+        this.dataAttrXField = "data-ggjs-x-field";
+        this.dataAttrXValue = "data-ggjs-x-value";
+        this.dataAttrYField = "data-ggjs-y-field";
+        this.dataAttrYValue = "data-ggjs-y-value";
 
-        this._map = new L.Map(mapElem.node(), {center: [37.8, -96.9], zoom: 4}); // US
+        this.geo = {};
+
+        // Clear the current contents
+        d3.select(plotDef.selector()).html("");
+
+        // Add the main SVG element
+        plotSVG = d3.select(plotDef.selector())
+            .append("svg")
+                .attr("width", plotDef.width())
+                .attr("height", plotDef.height());
+        this._plotSVG = plotSVG;
     };
 
-    var prototype = leafletRenderer.prototype;
+    // 'Inherit' base class prototype
+    var prototype = ggjs.util.extend(svgRenderer.prototype, ggjs.D3RendererBase.prototype);
 
-    prototype.plotDef = function (val) {
-        if (!arguments.length) return this._plotDef;
-        this._plotDef = val;
+    prototype.plotSVG = function (val) {
+        if (!arguments.length) return this._plotSVG;
+        this._plotSVG = val;
         return this;
     };
 
     prototype.rendererType = function () {
-        return "leaflet";
+        return "svg";
     };
 
-    prototype.remove = function () {
-    };
-
-    prototype.buildScales = function () {
-    };
-
-    prototype.setupXAxis = function () {
-    };
-
-    prototype.setupYAxis = function () {
-    };
+    // prototype.remove = function () {
+    // };
 
     prototype.drawAxes = function () {
+        var plotDef = this.plotDef(),
+            plot = this.plotSVG();
+
+        switch (plotDef.coord()) {
+            case "cartesian":
+                // Need an x and y axis
+                // ToDo: support x2 and y2 axes
+                //var xAxisDef = plotDef.axes().axis("x");
+                var xAxis = this.xAxis(),
+                    yAxis = this.yAxis(),
+                    xAxisY = plotDef.plotAreaY() + plotDef.plotAreaHeight();
+                plot.append("g")
+                        .attr("class", "ggjs-x ggjs-axis")
+                        .attr("transform", "translate(" + plotDef.plotAreaX() + "," + xAxisY + ")")
+                        .call(xAxis)
+                    // Tmp: orientate labels
+                    .selectAll("text")
+                        .attr("y", 5)
+                        .attr("x", 4)
+                        // .attr("dy", ".15em")
+                        .attr("dy", "12px")
+                        .attr("transform", "rotate(35)")
+                        .style("text-anchor", "start");
+                // ToDo: append x axis title
+                plot.append("g")
+                    .attr("class", "ggjs-y ggjs-axis")
+                    .attr("transform", "translate(" + plotDef.plotAreaX() + "," + plotDef.plotAreaY() + ")")
+                    .call(yAxis);
+                // ToDo: append x axis title
+
+                break;
+            case "polar":
+                console.log("Draw polar axes");
+                break;
+            case "mercator":
+                break;
+            default:
+                throw new Error("Unrecognised coordinate system used.");
+        }
     };
 
     prototype.drawLayers = function () {
+        var plotDef = this.plotDef(),
+            plotSVG = this.plotSVG(),
+            layerDefs = plotDef.layers().asArray(),
+            i, layerDef, plotArea;
+
+        // Setup layers
+        // TODO: move this setup work up to renderPlot()
+        switch (plotDef.coord()) {
+            case "cartesian":
+                plotArea = plotSVG.append("g")
+                    .attr("transform", "translate(" + plotDef.plotAreaX() + "," + plotDef.plotAreaY() + ")");
+                break;
+            case "polar":
+                plotArea = plotSVG.append("g")
+                    .attr("transform", "translate(" + (plotDef.plotAreaX() + Math.floor(plotDef.plotAreaWidth() / 2)) + "," + (plotDef.plotAreaY() + Math.floor(plotDef.plotAreaHeight() / 2)) + ")");
+                break;
+            case "mercator":
+                //plotSVG.call(this.geo.zoom);
+                plotArea = plotSVG.append("g")
+                    .attr("transform", "translate(" + plotDef.plotAreaX() + "," + plotDef.plotAreaY() + ")");
+                //plotArea.on("zoom", function () {console.log("zooming")})
+                var zoom = d3.behavior.zoom()
+                    .scale(1 << 12)
+                    .scaleExtent([1 << 9, 1 << 23])
+                    .translate([250, 250])
+                    .on("zoom", function () {console.log("zooming");});
+                //plotArea.call(zoom);
+                plotArea.on("mousemove", function () {console.log("mouse moved");});
+                break;
+        }
+
+        // Draw each layer
+        for (i = 0; i < layerDefs.length; i++) {
+            layerDef = layerDefs[i];
+
+            console.log("Drawing layer", layerDef.geom().geomType());
+
+            switch (layerDef.geom().geomType()) {
+                case "GeomPoint":
+                    this.drawPointLayer(plotArea, layerDef);
+                    break;
+                case "GeomBar":
+                    this.drawBarLayer(plotArea, layerDef);
+                    break;
+                case "GeomText":
+                    this.drawTextLayer(plotArea, layerDef);
+                    break;
+                case "GeomLine":
+                    this.drawLineLayer(plotArea, layerDef);
+                    break;
+                case "GeomPath":
+                    this.drawPathLayer(plotArea, layerDef);
+                    break;
+                case "GeomGeoTiles":
+                    this.drawMapTiles(plotArea, layerDef);
+                    break;
+                case "GeomGeoJSON":
+                    this.drawGeoJSONLayer(plotArea, layerDef);
+                    break;
+                default:
+                    throw new Error("Cannot draw layer, geom type not supported: " + layerDef.geom().geomType());
+            }
+        }
+
+
+
+        /*
         // TODO: let parent renderer calling draw layers?
         var plotDef = this.plotDef(),
             coords = plotDef.coord(),
@@ -1517,212 +2234,202 @@ ggjs.LeafletRenderer = (function (d3, layerRendererPlugins) {
             layerRenderer = new layerRendererConstr(plotSettings, layerDef);
 
             layerRenderer.onAdd(map);
-
-            /*
-
-            switch (layerDef.geom().geomType()) {
-                case "GeomPoint":
-                    this.drawPointLayer(plotArea, layerDef);
-                    break;
-                case "GeomBar":
-                    this.drawBarLayer(plotArea, layerDef);
-                    break;
-                case "GeomText":
-                    this.drawTextLayer(plotArea, layerDef);
-                    break;
-                case "GeomLine":
-                    this.drawLineLayer(plotArea, layerDef);
-                    break;
-                case "GeomPath":
-                    this.drawPathLayer(plotArea, layerDef);
-                    break;
-                case "GeomGeoTiles":
-                    this.drawMapTiles(plotArea, layerDef);
-                    break;
-                case "GeomGeoJSON":
-                    this.drawGeoJSONLayer(plotArea, layerDef);
-                    break;
-                default:
-                    throw new Error("Cannot draw layer, geom type not supported: " + layerDef.geom().geomType());
-            }
-            */
         }
+        */
     };
+
+    // --------
+    // Legends
+    // --------
+
+    function scaleLegend () {
+        // Legend attributes
+
+        // Scale
+        var _scale = null,
+            _layout = "horizontal",
+            _itemOffsetX = 0,   // Horizontal gap between items
+            _itemOffsetY = 10,  // Vertical gap between items
+            _itemRadius = Math.floor(_itemOffsetY / 2),
+            _itemMarkerLabelGap = 10;
+
+        // Legend function.
+        function legend (selection) {
+            selection.each(function (data) {
+                var legendContainer = d3.select(this);
+
+                legendContainer.selectAll(".ggjs-legend-item-marker")
+                        .data(data)
+                    .enter().append("circle")
+                        .attr("class", "ggjs-legend-item-marker")
+                        .attr("r", _itemRadius)
+                        // .attr("cx", 0)
+                        // .attr("cy", 0)
+                        .attr("cx", function (d, i) { return (i * _itemOffsetX) - _itemRadius; })
+                        .attr("cy", function (d, i) { return (i * _itemOffsetY) - _itemRadius; })
+                        .style("fill", function (d) { return _scale(d); })
+                        .style("stroke", "black");
+
+                legendContainer.selectAll(".ggjs-legend-item-label")
+                        .data(data)
+                    .enter().append("text")
+                        .attr("class", "ggjs-legend-item-label")
+                        .attr("x", function (d, i) { return (i * _itemOffsetX) + _itemMarkerLabelGap; })
+                        .attr("y", function (d, i) { return i * _itemOffsetY; })
+                        .text(function (d) { return d; });
+
+                // Add the label 'Legend' on enter
+                // containerDiv.selectAll('b')
+                //  .data([data])
+                //  .enter().append('b')
+                //  .text('Legend');
+            });
+        }
+
+        // Accessor methods
+
+        // Scale accessor
+        legend.scale = function (value) {
+            if (!arguments.length) { return _scale; }
+            _scale = value;
+            return legend;
+        };
+
+        // Y offset accessor
+        legend.itemOffsetX = function (value) {
+            if (!arguments.length) { return _itemOffsetX; }
+            _itemOffsetX = value;
+            return legend;
+        };
+
+        // Y offset accessor
+        legend.itemOffsetY = function (value) {
+            if (!arguments.length) { return _itemOffsetY; }
+            _itemOffsetY = value;
+            return legend;
+        };
+
+        // Radius accessor
+        legend.itemRadius = function (value) {
+            if (!arguments.length) { return _itemRadius; }
+            _itemRadius = value;
+            return legend;
+        };
+
+        return legend;
+    }
 
     prototype.drawLegends = function () {
-    };
+        // ToDo: find the legends for all aes across all layers
 
-    // TODO: This is copied from orig renderer. Put in base class?
-    prototype.getDataset = function (datasetName) {
+        // ToDo: combine aes if possible, like fill and shape
+        // Find rules to combine legends - e.g. if same fields
+        // are used for different aes, then legends can be combined.
+        // E.g. if 'country' field is used for aes 'shape' and 'fill'
+        // then draw a single legend for 'country' values adapting 
+        // the fill and shape of the markers
         var plotDef = this.plotDef(),
-            dataset = plotDef.data().dataset(datasetName),
-            datasetNames;
-        if (dataset === null || typeof dataset === "undefined") {
-            // Use default dataset for the plot
-            datasetNames = plotDef.data().names();
-            if (datasetNames.length !== 1) {
-                throw new Error("Expected one DataSet in the Plot to use as the default DataSet");
-            }
-            datasetName = datasetNames[0];
-            dataset = plotDef.data().dataset(datasetName);
+            plot = this.plotSVG(),
+            layerDefs = plotDef.layers().asArray(),
+            legendX = 0,    // Cummalative legend offset 
+            legendY = 0,    // Cummalative legend offset 
+            itemOffsetX = 0,    // Horizontal gap between legend items
+            itemOffsetY = 18,   // Vertical gap between legend items
+            itemRadius = 5, // Radius of circle markers
+            titleHeight = 12,   // Height of legend title
+            i, j, layerDef, legendArea, legendBaseX, legendBaseY, 
+            scaleNamesLookup = {},
+            scaleNamesToDisplay = [],
+            legendData, legend, aesmappings, aesmapping, aes, scaleName, scale;
 
-            if (dataset === null) {
-                throw new Error("Couldn't find a layer DataSet or a default DataSet.");
-            }
+        // ToDo: legend position
+        switch ("top") {
+            case "top":
+                itemOffsetX = 100;
+                itemOffsetY = 0;
+                legendBaseX = Math.max(0, plotDef.plotAreaX() - itemOffsetY);
+                legendArea = plot.append("g")
+                    .attr("transform", "translate(" + legendBaseX + "," + plotDef.plotAreaY() + ")");
+                break;
+            // case "bottom":
+            // case "left":
+            // case "right": // Fall through to default for right
+            default:
+                itemOffsetX = 0;
+                itemOffsetY = 18;
+                legendBaseX = plotDef.plotAreaX() + (0.7 * plotDef.plotAreaWidth());
+                legendArea = plot.append("g")
+                    .attr("transform", "translate(" + legendBaseX + "," + plotDef.plotAreaY() + ")");
+                break;
         }
-        return dataset;
-    };
 
-    return leafletRenderer;
-}(d3, ggjs.layerRendererPlugins));
+        // Look for scales to turn into legends
+        for (i = 0; i < layerDefs.length; i++) {
+            layerDef = layerDefs[i];
+            aesmappings = layerDef.aesmappings().asArray();
 
-
-ggjs.Renderer = (function (d3) {
-    var renderer = function (plotDef) {
-        this.renderer = {
-            plotDef: plotDef,
-            plot: null, // The element to draw to
-            xAxis: null,
-            yAxis: null,
-            scaleNameToD3Scale: {}, // Lookup to find D3 scale for scale name
-            datasetsRetrieved: {},
-            warnings: [],
-            defaultFillColor: "rgb(31, 119, 180)"
-        };
-        this.geo = {};
-        this.dataAttrXField = "data-ggjs-x-field";
-        this.dataAttrXValue = "data-ggjs-x-value";
-        this.dataAttrYField = "data-ggjs-y-field";
-        this.dataAttrYValue = "data-ggjs-y-value";
-
-        // Width: autoset width if width is missing
-        var width = plotDef.width(),
-            parentWidth;
-        if (typeof width === 'undefined' || width === null) {
-            // Set width to parent container width
-            try {
-                parentWidth = d3.select(plotDef.selector()).node().offsetWidth;
-            } catch (err) {
-                throw new Error("Couldn't find the width of the parent element."); 
-            }
-            if (typeof parentWidth === 'undefined' || parentWidth === null) {
-                throw new Error("Couldn't find the width of the parent element.");
-            }
-            this.renderer.plotDef.width(parentWidth);
-        }
-    };
-
-    var prototype = renderer.prototype;
-
-    // ----------
-    // Accessors
-    // ----------
-
-    prototype.plotDef = function (val) {
-        if (!arguments.length) return this.renderer.plotDef;
-        this.renderer.plotDef = val;
-        return this;
-    };
-
-    prototype.d3Scale = function (scaleName, val) {
-        if (!arguments.length) {
-            throw new Error("Must supply args when getting/setting d3 scale");
-        }
-        else if (arguments.length === 1) {
-            return this.renderer.scaleNameToD3Scale[scaleName];
-        } else {
-            this.renderer.scaleNameToD3Scale[scaleName] = val;
-        }
-        
-        return this;
-    };
-
-    prototype.warnings = function (val) {
-        if (!arguments.length) return this.renderer.warnings;
-        this.renderer.warnings = val;
-        return this;
-    };
-
-    // End Accessors
-
-    prototype.warning = function (warning) {
-        // Adds a warning to the log
-        this.renderer.warnings.push(warning);
-    };
-
-    prototype.render = function () {
-        var this_ = this;
-        // Clear contents (so they disapper in the event of failed data load)
-        console.log("TODO: switch content remove to new renderer");
-        d3.select(this.plotDef().selector()).select("svg").remove();
-        // Fetch data then render plot
-        this.fetchData(function () { this_.renderPlot(); });
-    };
-
-    prototype.fetchData = function (finishedCallback) {
-        var plotDef = this.plotDef(),
-            datasetNames = plotDef.data().names(),
-            loadData = function (url, datasetName, contentType, callback) {
-                var contentTypeLC = contentType ? contentType.toLowerCase() : contentType,
-                    dataset = plotDef.data().dataset(datasetName);
-                switch (contentTypeLC) {
-                    case "text/csv":
-                        d3.csv(url, function(err, res) {
-                            if (err) throw new Error("Error fetching CSV results: " + err.statusText);
-                            dataset.values(res);
-                            dataset.applyDataTypes();
-                            callback(null, res);
-                        });
-                        break;
-                    case "text/tsv":
-                    case "text/tab-separated-values":
-                        d3.tsv(url, function(err, res) {
-                            if (err) throw new Error("Error fetching TSV results: " + err.statusText);
-                            dataset.values(res);
-                            dataset.applyDataTypes();
-                            callback(null, res);
-                        });
-                        break;
-                    case "application/json":
-                        d3.json(url, function(err, res) {
-                            if (err) throw new Error("Error fetching JSON results: " + err.statusText);
-                            dataset.values(res);
-                            dataset.applyDataTypes();
-                            callback(null, res);
-                        });
-                        break;
-                    case "application/vnd.geo+json":
-                        d3.json(url, function(err, res) {
-                            if (err) throw new Error("Error fetching GEO JSON results: " + err.statusText);
-                            dataset.values(res);
-                            callback(null, res);
-                        });
-                        break;
-                    default:
-                        throw new Error("Don't know you to load data of type " + contentType);
+            // console.log("aesmappings", aesmappings)
+            if (aesmappings) {
+                for (j = 0; j < aesmappings.length; j++) {
+                    aesmapping = aesmappings[j];
+                    // console.log(aesmapping)
+                    aes = aesmapping.aes();
+                    // Skip aesthetics which are already display as axis
+                    if (aes === "x" || aes === "y") {
+                        continue;
+                    }
+                    scaleName = aesmapping.scaleName();
+                    // console.log("aesmapping", aes, scaleName);
+                    if (scaleName !== null && typeof scaleNamesLookup[scaleName] === 'undefined') {
+                        scaleNamesToDisplay.push(scaleName);
+                        scaleNamesLookup[scaleName] = true;
+                    }
                 }
-            },
-            q = queue(3),
-            i, datasetName, dataset;
-
-        // Queue all data held at url
-        for (i = 0; i < datasetNames.length; i++) {
-            datasetName = datasetNames[i];
-            dataset = plotDef.data().dataset(datasetName);
-            if (dataset && dataset.url()) {
-                q.defer(loadData, dataset.url(), datasetName, dataset.contentType());
             }
         }
-        q.awaitAll(function(error, results) {
-                if (error) {
-                    // ToDo: write error in place of chart?
-                    throw new Error("Error fetching data results: " + error.statusText);
-                }
-                // Data loaded - continue rendering
-                finishedCallback();
-            });
+
+        for (i = 0; i < scaleNamesToDisplay.length; i++) {
+            // ToDo: check type of scale
+            //   if ordinal: when setting up plot find the domain values
+            //          then look them up here
+            //   if quan: display box with range of values (gradient?)
+            scaleName = scaleNamesToDisplay[i];
+            scale = this.d3Scale(scaleName);
+            legendData = scale.domain();
+            // legendData = ["a", "b", "c"];
+            // console.log("scale: ", scaleNamesToDisplay[i]);
+            // find the scale
+            // scale = d3.scale.category20();
+            // scale.domain(legendData);
+
+            var lgnd = scaleLegend()
+                .itemOffsetX(itemOffsetX)
+                .itemOffsetY(itemOffsetY)
+                .itemRadius(itemRadius)
+                .scale(scale);
+
+            legend = legendArea.append("g")
+                .attr("transform", "translate(0," + legendY + ")")
+                .attr("class", "legend")
+                .data([legendData])
+                // .attr("transform","translate(50,30)")
+                .style("font-size","12px")
+                .call(lgnd);
+
+            // Set up offsets for next legend collection
+            legendY += titleHeight + legendData.length * itemOffsetY;
+        }
+
     };
 
+
+    // ----
+    // Geo
+    // ----
+
+    // NOTE: this is old SVG attempt at renderering maps. Currently
+    // using separate Leaflet renderer, but would be good to get
+    // SVG maps working again to remove Leaflet dependency.
     prototype.setupGeo = function () {
         var this_ = this,
             plotDef = this.plotDef(),
@@ -1818,158 +2525,13 @@ ggjs.Renderer = (function (d3) {
             .call(zoom.event);
     };
 
-    // prototype.zoomed = function () {
-    //  console.log("Some zooming");
-    // }
 
-    // TODO: Move all SVG code to separate renderer module
-    prototype.svgRenderer = function (plotDef) {
-        var plot;
-        d3.select(plotDef.selector()).html("");
-        plot = d3.select(plotDef.selector())
-            .append("svg")
-                .attr("width", plotDef.width())
-                .attr("height", plotDef.height());
-        console.log("svgRenderer", this);
-        this.renderer.plot = plot;
 
-        return {
-            buildScales: this.buildScales,
-            setupXAxis: this.setupXAxis,
-            setupYAxis: this.setupYAxis,
-            setupGeo: this.setupGeo,
-            drawAxes: this.drawAxes,
-            drawLayers: this.drawLayers,
-            drawLegends: this.drawLegends
-        };
-    };
 
-    prototype.renderPlot = function () {
-        var plotDef = this.plotDef(),
-            renderer,
-            plot;
 
-        if (plotDef.coord() === "mercator") {
-            renderer = new ggjs.LeafletRenderer(plotDef);
-
-            console.log("renderer", renderer);
-
-            renderer.buildScales();
-            renderer.setupXAxis();
-            renderer.setupYAxis();
-            // renderer.setupGeo();
-
-            renderer.drawAxes();
-            renderer.drawLayers();
-            
-            renderer.drawLegends();
-        } else {
-            // TODO: Change to constructor
-            renderer = this.svgRenderer(plotDef);
-            // d3.select(this.plotDef().selector()).select("svg").remove();
-            d3.select(plotDef.selector()).html("");
-            plot = d3.select(plotDef.selector())
-                .append("svg")
-                    .attr("width", plotDef.width())
-                    .attr("height", plotDef.height());
-            this.renderer.plot = plot;
-
-            // ToDo: if no domain set on axes, default to extent
-            // of data for appropriate aes across layers
-            this.buildScales();
-            this.setupXAxis();
-            this.setupYAxis();
-            this.setupGeo();
-
-            this.drawAxes();
-            this.drawLayers();
-            
-            this.drawLegends();
-        }
-
-        
-
-        /* Pre renderer module code
-        
-
-        console.log(plotDef.plotAreaX());
-        console.log(plotDef.plotAreaY());
-        console.log(plotDef.plotAreaHeight());
-        console.log(plotDef.plotAreaWidth());
-
-        
-        */
-    };
-
-    prototype.drawLayers = function () {
-        var plotDef = this.plotDef(),
-            plot = this.renderer.plot,
-            layerDefs = plotDef.layers().asArray(),
-            i, layerDef, plotArea;
-
-        // Setup layers
-        // TODO: move this setup work up to renderPlot()
-        switch (plotDef.coord()) {
-            case "cartesian":
-                plotArea = plot.append("g")
-                    .attr("transform", "translate(" + plotDef.plotAreaX() + "," + plotDef.plotAreaY() + ")");
-                break;
-            case "polar":
-                plotArea = plot.append("g")
-                    .attr("transform", "translate(" + (plotDef.plotAreaX() + Math.floor(plotDef.plotAreaWidth() / 2)) + "," + (plotDef.plotAreaY() + Math.floor(plotDef.plotAreaHeight() / 2)) + ")");
-                break;
-            case "mercator":
-                //plot.call(this.geo.zoom);
-                plotArea = plot.append("g")
-                    .attr("transform", "translate(" + plotDef.plotAreaX() + "," + plotDef.plotAreaY() + ")");
-                //plotArea.on("zoom", function () {console.log("zooming")})
-                var zoom = d3.behavior.zoom()
-                    .scale(1 << 12)
-                    .scaleExtent([1 << 9, 1 << 23])
-                    .translate([250, 250])
-                    .on("zoom", function () {console.log("zooming");});
-                //plotArea.call(zoom);
-                plotArea.on("mousemove", function () {console.log("mouse moved");});
-                break;
-        }
-
-        // Draw each layer
-        for (i = 0; i < layerDefs.length; i++) {
-            layerDef = layerDefs[i];
-
-            switch (layerDef.geom().geomType()) {
-                case "GeomPoint":
-                    this.drawPointLayer(plotArea, layerDef);
-                    break;
-                case "GeomBar":
-                    this.drawBarLayer(plotArea, layerDef);
-                    break;
-                case "GeomText":
-                    this.drawTextLayer(plotArea, layerDef);
-                    break;
-                case "GeomLine":
-                    this.drawLineLayer(plotArea, layerDef);
-                    break;
-                case "GeomPath":
-                    this.drawPathLayer(plotArea, layerDef);
-                    break;
-                case "GeomGeoTiles":
-                    this.drawMapTiles(plotArea, layerDef);
-                    break;
-                case "GeomGeoJSON":
-                    this.drawGeoJSONLayer(plotArea, layerDef);
-                    break;
-                default:
-                    throw new Error("Cannot draw layer, geom type not supported: " + layerDef.geom().geomType());
-            }
-        }
-
-        // Post layer processing
-        // switch (plotDef.coord()) {
-        //  case "mercator":
-        //      break;
-        // }
-    };
+    // ----------------
+    // Layer renderers
+    // ----------------
 
     prototype.drawMapTiles = function (plotArea, layerDef) {
         // Draws geographic map tiles images onto plot area
@@ -2163,7 +2725,7 @@ ggjs.Renderer = (function (d3) {
             // height = plotDef.plotAreaHeight(),
             zoom = this.geo.zoom,
             projection = this.geo.projection,
-            plot = this.renderer.plot;
+            plot = this.plotSVG();
         console.log("drawing map path");
         var svg = plot;
 
@@ -2248,7 +2810,7 @@ ggjs.Renderer = (function (d3) {
         // Draws points (e.g. circles) onto the plot area
         var projection = this.geo.projection,
             zoom = this.geo.zoom,
-            plot = this.renderer.plot,
+            plot = this.plotSVG(),
             dataAttrXField = this.dataAttrXField,
             dataAttrXValue = this.dataAttrXValue,
             dataAttrYField = this.dataAttrYField,
@@ -2427,12 +2989,12 @@ ggjs.Renderer = (function (d3) {
             default:
                 throw new Error("Don't know how to draw bars for co-ordinate system " + plotDef.coord());
         }
-
         this.applyFillColour(bars, aesmappings);
         
     };
 
     prototype.drawCartesianBars = function (plotArea, values, xField, yField, xScale, yScale, yAxisHeight, isStacked) {
+        console.log("Drawing cart bars");
         var dataAttrXField = this.dataAttrXField,
             dataAttrXValue = this.dataAttrXValue,
             dataAttrYField = this.dataAttrYField,
@@ -2455,6 +3017,7 @@ ggjs.Renderer = (function (d3) {
                 .attr(dataAttrXValue, function (d) { return d[xField]; })
                 .attr(dataAttrYField, yField)
                 .attr(dataAttrYValue, function (d) { return d[yField]; });
+        console.log("End Drawing cart bars");
         return bars;
     };
 
@@ -2513,111 +3076,134 @@ ggjs.Renderer = (function (d3) {
         
     };
 
-    prototype.applyFillColour = function (svgItems, aesmappings) {
-        // Applies fill colour to svg elements
-        // Params:
-        //  svgItems: the svg elements as D3 select list
-        //  aesmappings: the layer's aesmappings
+    return svgRenderer;
+}(d3, ggjs.layerRendererPlugins));
+// Leaflet map renderer
+ggjs.LeafletRenderer = (function (d3, layerRendererPlugins, L) {
+    var leafletRenderer = function (plotDef) {
+        this._plotDef = plotDef;
+        var width = plotDef.width(),
+            height = plotDef.height(),
+            parentWidth, elem, mapElem;
 
-        // Fill colour
-        // ToDo: setup colour scale across all layers, so colours
-        // are matched across layers
-        console.log("Warning: move colour mapping to all levels.");
-        var plotDef = this.plotDef(),
-            fillAesMap = aesmappings.findByAes("fill"),
-            defaultFillColor = this.renderer.defaultFillColor;
-        if (fillAesMap !== null) {
-            var colorField = fillAesMap.field(),
-                colorScaleDef = this.scaleDef(fillAesMap.scaleName()),
-                scaleName = fillAesMap.scaleName(),
-                colorScale;
-            // if (colorScaleDef == null) {
-            //  this.warning("Couldn't set colour on layer - fill colour scale missing.")
-            //  svgItems.style("fill", function(d) { return defaultFillColor; });
-            // } else {
-            //  colorScale = this.scale(colorScaleDef);
-            //  svgItems.style("fill", function(d) { return colorScale(d[colorField]); });
-            // }
-            
-            if (scaleName === null) {
-                this.warning("Couldn't set colour on layer - fill colour scale missing.");
-                svgItems.style("fill", function(d) { return defaultFillColor; });
-            } else {
-                colorScale = this.d3Scale(scaleName);
-                console.log("Using d3 scale", scaleName, colorScale.domain());
-                svgItems.style("fill", function(d) { return colorScale(d[colorField]); });
-            }   
-        } else {
-            svgItems.style("fill", function(d) { return defaultFillColor; });
+        if (typeof width === 'undefined' || width === null) {
+            // Set width to parent container width
+            try {
+                parentWidth = d3.select(plotDef.selector()).node().offsetWidth;
+            } catch (err) {
+                throw new Error("Couldn't find the width of the parent element."); 
+            }
+            if (typeof parentWidth === 'undefined' || parentWidth === null) {
+                throw new Error("Couldn't find the width of the parent element.");
+            }
+            this._plotDef.width(parentWidth);
         }
+
+        if (typeof height === 'undefined' || height === null) {
+            this._plotDef.height(500);
+        }
+
+        // Set height/width of div (needed for Leaflet)
+        elem = d3.select(plotDef.selector());
+        mapElem = elem.append("div")
+            .style("height", this._plotDef.height() + "px")
+            .style("width", this._plotDef.width() + "px");
+
+        this._map = new L.Map(mapElem.node(), {center: [37.8, -96.9], zoom: 4}); // US
+    };
+
+    var prototype = leafletRenderer.prototype;
+
+    prototype.plotDef = function (val) {
+        if (!arguments.length) return this._plotDef;
+        this._plotDef = val;
+        return this;
+    };
+
+    prototype.rendererType = function () {
+        return "leaflet";
+    };
+
+    prototype.remove = function () {
+    };
+
+    prototype.buildScales = function () {
+    };
+
+    prototype.setupXAxis = function () {
+    };
+
+    prototype.setupYAxis = function () {
     };
 
     prototype.drawAxes = function () {
+    };
+
+    prototype.drawLayers = function () {
+        // TODO: let parent renderer calling draw layers?
         var plotDef = this.plotDef(),
-            plot = this.renderer.plot;
+            coords = plotDef.coord(),
+            // plot = this.renderer.plot,
+            map = this._map,
+            layerDefs = plotDef.layers().asArray(),
+            i, layerDef, plotArea, layerRenderer, layerRendererConstr, geom;
 
-        switch (plotDef.coord()) {
-            case "cartesian":
-                // Need an x and y axis
-                // ToDo: support x2 and y2 axes
-                //var xAxisDef = plotDef.axes().axis("x");
-                var xAxis = this.xAxis(),
-                    yAxis = this.yAxis(),
-                    xAxisY = plotDef.plotAreaY() + plotDef.plotAreaHeight();
-                plot.append("g")
-                        .attr("class", "ggjs-x ggjs-axis")
-                        .attr("transform", "translate(" + plotDef.plotAreaX() + "," + xAxisY + ")")
-                        .call(xAxis)
-                    // Tmp: orientate labels
-                    .selectAll("text")
-                        .attr("y", 5)
-                        .attr("x", 4)
-                        // .attr("dy", ".15em")
-                        .attr("dy", "12px")
-                        .attr("transform", "rotate(35)")
-                        .style("text-anchor", "start");
-                // ToDo: append x axis title
-                plot.append("g")
-                    .attr("class", "ggjs-y ggjs-axis")
-                    .attr("transform", "translate(" + plotDef.plotAreaX() + "," + plotDef.plotAreaY() + ")")
-                    .call(yAxis);
-                // ToDo: append x axis title
+        // Draw each layer
+        for (i = 0; i < layerDefs.length; i++) {
+            layerDef = layerDefs[i];
 
-                break;
-            case "polar":
-                console.log("Draw polar axes");
-                break;
-            case "mercator":
-                break;
-            default:
-                throw new Error("Unrecognised coordinate system used.");
+            var datasetName = layerDef.data(),
+                dataset = this.getDataset(datasetName),
+                values = dataset.values();
+
+            geom = layerDef.geom().geomType();
+            layerRendererConstr = layerRendererPlugins.getLayerRenderer(this.rendererType(), coords, geom);
+            if (layerRendererConstr === null) {
+                throw new Error("Couldn't find layer renderer for " + this.rendererType() + 
+                    ", " + coords + ", " + geom);
+            }
+
+            // var plotSettings = {getDataset: this.getDataset};
+            var plotSettings = this;
+            layerRenderer = new layerRendererConstr(plotSettings, layerDef);
+
+            layerRenderer.onAdd(map);
+
+            /*
+
+            switch (layerDef.geom().geomType()) {
+                case "GeomPoint":
+                    this.drawPointLayer(plotArea, layerDef);
+                    break;
+                case "GeomBar":
+                    this.drawBarLayer(plotArea, layerDef);
+                    break;
+                case "GeomText":
+                    this.drawTextLayer(plotArea, layerDef);
+                    break;
+                case "GeomLine":
+                    this.drawLineLayer(plotArea, layerDef);
+                    break;
+                case "GeomPath":
+                    this.drawPathLayer(plotArea, layerDef);
+                    break;
+                case "GeomGeoTiles":
+                    this.drawMapTiles(plotArea, layerDef);
+                    break;
+                case "GeomGeoJSON":
+                    this.drawGeoJSONLayer(plotArea, layerDef);
+                    break;
+                default:
+                    throw new Error("Cannot draw layer, geom type not supported: " + layerDef.geom().geomType());
+            }
+            */
         }
     };
 
-    prototype.xAxis = function (val) {
-        if (!arguments.length) return this.renderer.xAxis;
-        this.renderer.xAxis = val;
-        return this;
+    prototype.drawLegends = function () {
     };
 
-    prototype.yAxis = function (val) {
-        if (!arguments.length) return this.renderer.yAxis;
-        this.renderer.yAxis = val;
-        return this;
-    };
-
-    prototype.xAxisScaleDef = function (val) {
-        if (!arguments.length) return this.renderer.xAxisScaleDef;
-        this.renderer.xAxisScaleDef = val;
-        return this;
-    };
-
-    prototype.yAxisScaleDef = function (val) {
-        if (!arguments.length) return this.renderer.yAxisScaleDef;
-        this.renderer.yAxisScaleDef = val;
-        return this;
-    };
-
+    // TODO: This is copied from orig renderer. Put in base class?
     prototype.getDataset = function (datasetName) {
         var plotDef = this.plotDef(),
             dataset = plotDef.data().dataset(datasetName),
@@ -2638,619 +3224,142 @@ ggjs.Renderer = (function (d3) {
         return dataset;
     };
 
-    prototype.statAcrossLayers = function (aes, stat) {
-        // Looks at the data across all layers for an
-        // aesthetic and gets info about it (e.g. max or min)
-        var plotDef = this.plotDef(),
-            layers = plotDef.layers().asArray(),
-            statVal = null,
-            i, layer, aesmap, field, tmpStat,
-            datasetName, dataset;
-
-        for (i = 0; i < layers.length; i++) {
-            layer = layers[i];
-            aesmap = layer.aesmappings().findByAes(aes);
-
-            // Layer data
-            datasetName = layer.data();
-            if (!datasetName) {
-                datasetName = plotDef.defaultDatasetName();
-            }
-            //dataset = plotDef.data().dataset(datasetName);
-            dataset = this.getDataset(datasetName);
-            if (dataset === null) {
-                throw new Error("Unable to find dataset with name " + datasetName);
-            }
-
-            if (aesmap) {
-                field = aesmap.field();
-                if (stat === "max" && layer.useStackedData()) {
-                    // Stack data
-                    tmpStat = this.layerStackedDataMax(layer, dataset, aes);
-                } else {
-                    // Normal case for finding aes value
-                    tmpStat = ggjs.dataHelper.datatableStat(dataset.values(), field, stat);
-                }
-                if (!isNaN(tmpStat)) {
-                    if (statVal === null) statVal = tmpStat;
-                    statVal = stat === "min" ? Math.min(statVal, tmpStat) : Math.max(statVal, tmpStat);
-                }
-            }
-        }
-
-        return statVal;
-    };
-
-    prototype.layerStackedDataMax = function (layer, dataset, aes) {
-        // Find the max value for the stacked data on this level.
-        // Highest value for stacked data is sum of values in group, 
-        // not the highest value across the whole value column
-        var tmpStat,
-            xAes = layer.aesmappings().findByAes("x"), 
-            fillAes = layer.aesmappings().findByAes("fill"),
-            valueAes = layer.aesmappings().findByAes(aes);
-
-        if (valueAes === null) {
-            throw new Error("Need value aes map to find stacked value");
-        }
-        if (xAes === null) {
-            throw new Error("Need x aes map to find stacked value");
-        }
-        if (fillAes === null) {
-            throw new Error("Need fill aes map to find stacked value");
-        }
-
-        if (aes === "y") {
-            // ToDo: is the fill aes the only way to specify stacked figures?
-            tmpStat = ggjs.dataHelper.maxStackValue(dataset.values(), 
-                xAes.field(), fillAes.field(), valueAes.field());
-        } else {
-            throw new Error("Don't know how to find stacked value for value aes " + aes);
-        }
-
-        return tmpStat;
-    };
-
-    prototype.allValuesForLayer = function (layer, aesmap) {
-        // Gets all data values for an aes in a layer
-        var plotDef = this.plotDef(),
-            values = [],
-            //tmpVals, 
-            i, field,
-            datasetName, dataset;
-
-        // Layer data
-        datasetName = layer.data();
-        if (!datasetName) {
-            datasetName = plotDef.defaultDatasetName();
-        }
-        dataset = this.getDataset(datasetName);
-        if (dataset === null) {
-            throw new Error("Unable to find dataset with name " + datasetName);
-        }
-
-        if (aesmap) {
-            field = aesmap.field();
-            
-            if (dataset.values().map) {
-                values = dataset.values().map(function (d) { return d[field]; });
-            } else {
-                // backup way to get values from data
-                // ToDo: use array.map polyfill so this can be removed?
-                var dsVals = dataset.values(),
-                    j;
-                this.warning("Old browser - doesn't support array.map");
-                for (j = 0; j < dsVals.length; j++) {
-                    values.push(dsVals[j][field]);
-                }
-            }
-            // values = d3.merge([ values, tmpVals ]);
-        }
-
-        return values;
-    };
-
-    prototype.allValuesAcrossLayers = function (aes) {
-        // Looks at the data across all layers for an
-        // aesthetic and gets all it's values
-        var plotDef = this.plotDef(),
-            layers = plotDef.layers().asArray(),
-            values = [],
-            tmpVals, i, layer, aesmap, field,
-            datasetName, dataset;
-
-        for (i = 0; i < layers.length; i++) {
-            layer = layers[i];
-            aesmap = layer.aesmappings().findByAes(aes);
-
-            tmpVals = this.allValuesForLayer(layer, aesmap);
-            values = d3.merge([ values, tmpVals ]);
-
-            // // Layer data
-            // datasetName = layer.data();
-            // if (!datasetName) {
-            //  datasetName = plotDef.defaultDatasetName();
-            // }
-            // //dataset = plotDef.data().dataset(datasetName);
-            // dataset = this.getDataset(datasetName);
-            // if (dataset == null) {
-            //  throw "Unable to find dataset with name " + datasetName;
-            // }
-
-            // if (aesmap) {
-            //  field = aesmap.field();
-                
-            //  if (dataset.values().map) {
-            //      tmpVals = dataset.values().map(function (d) { return d[field]; });
-            //  } else {
-            //      // backup way to get values from data
-            //      // ToDo: use array.map polyfill so this can be removed?
-            //      var tmpVals = [],
-            //          dsVals = dataset.values(),
-            //          j;
-            //      this.warning("Old browser - doesn't support array.map");
-            //      for (j = 0; j < dsVals.length; j++) {
-            //          tmpVals.push(dsVals[j][field]);
-            //      }
-            //  }
-            //  values = d3.merge([ values, tmpVals ]);
-            // }
-        }
-
-        return values;
-    };
+    return leafletRenderer;
+}(d3, ggjs.layerRendererPlugins, L));
 
 
-    // -------
-    // Scales
-    // -------
-
-    // Build the scales based on data
-    prototype.buildScales = function () {
-        var plotDef = this.plotDef(),
-            plot = this.renderer.plot,
-            layerDefs = plotDef.layers().asArray(),
-            i, j,
-            // scaleNamesLookup = {},
-            // scaleNames = [],
-            scaleNameToLayerInfos = {},
-            // scaleNameToLayer = {},
-            // scaleNameToAesMap = {},
-            scaleDef,
-            layerInfo,
-            layerInfos,
-            layerDef,
-            tmpScale,
-            values,
-            tmpVals,
-            min, max,
-            aesmappings, aesmapping, aes, scaleName, scale;
-
-        // Find names of all the scales used
-        for (i = 0; i < layerDefs.length; i++) {
-            layerDef = layerDefs[i];
-            aesmappings = layerDef.aesmappings().asArray();
-
-            // console.log("aesmappings", aesmappings)
-            if (aesmappings) {
-                for (j = 0; j < aesmappings.length; j++) {
-                    aesmapping = aesmappings[j];
-                    // console.log(aesmapping)
-                    aes = aesmapping.aes();
-                    // Skip aesthetics which are already display as axis
-                    // if (aes === "x" || aes === "y") {
-                    //  continue;
-                    // }
-                    scaleName = aesmapping.scaleName();
-                    if (scaleName === null) {
-                        continue;
-                    }
-                    // Store the information about where scale is used
-                    layerInfo = {
-                        layerDef: layerDef,
-                        aesmapping: aesmapping
-                    };
-                    if (typeof scaleNameToLayerInfos[scaleName] === 'undefined') {
-                        scaleNameToLayerInfos[scaleName] = [layerInfo];
-                    } else {
-                        scaleNameToLayerInfos[scaleName].push(layerInfo);
-                    }
-                    
-                    // scaleNameToLayer[scaleName] = layer;
-                    // scaleNameToAesMap[scaleName] = aesmapping;
-                    // console.log("aesmapping", aes, scaleName);
-                    // if (scaleName != null && typeof scaleNamesLookup[scaleName] === 'undefined') {
-                    //  scaleNames.push(scaleName);
-                    //  scaleNamesLookup[scaleName] = true;
-                    // }
-                }
-            }
-        }
-
-        // Create a D3 scale for each scale
-        // console.log("Creating d3 scales")
-        for (scaleName in scaleNameToLayerInfos) {
-            scaleDef = plotDef.scales().scale(scaleName);
-            scale = this.scale(scaleDef);
-            if (scaleDef.hasDomain()) {
-                scale.domain(scaleDef.domain());
-            } else {
-                // If scale domain hasn't been set, use data to find it
-                if (scaleDef.isQuantitative()) {
-                    max = this.statAcrossLayers(aes, "max");
-                    if (!isNaN(max)) {
-                        scale.domain([0, max]).nice();
-                    }
-                } else if (scaleDef.isOrdinal()) {
-                    // Find values across all layers
-                    layerInfos = scaleNameToLayerInfos[scaleName];
-                    values = [];
-                    // console.log("scaleName", scaleName)
-                    for (i = 0; i < layerInfos.length; i++) {
-                        layerInfo = layerInfos[i];
-                        layerDef = layerInfo.layerDef;
-                        aesmapping = layerInfo.aesmapping;
-                        // ToDo: cache values for layer/field combos
-                        // console.log("layer info", scaleName, layerDef.data(), aesmapping.aes(), aesmapping.field());
-                        tmpVals = this.allValuesForLayer(layerDef, aesmapping);
-                        values = d3.merge([ values, tmpVals ]);
-                    }
-                    scale.domain(values);
-                } else if (scaleDef.isTime()) {
-                    // min = this.statAcrossLayers(aes, "min");
-                    // max = this.statAcrossLayers(aes, "max");
-                    // if (!isNaN(max)) {
-                    //  scale.domain([0, max]).nice();
-                    // }
-                    console.log("setting time scale domain");
-                    min = new Date(2014);
-                    max = new Date(2016);
-                    scale.domain([min, max]).nice();
-                }
-            }
-            
-            this.d3Scale(scaleName, scale);
-        }
-    };
-
-    prototype.setupAxisScale = function (aes, scale, scaleDef) {
-        var min = 0,
-            max,
-            allValues = [];
-
-        
-        if (scaleDef.hasDomain()) {
-            scale.domain(scaleDef.domain());
-        } else {
-            // If scale domain hasn't been set, use data to find it
-            if (scaleDef.isQuantitative()) {
-                max = this.statAcrossLayers(aes, "max");
-                if (!isNaN(max)) {
-                    scale.domain([0, max]).nice();
-                }
-            } else if (scaleDef.isOrdinal()) {
-                allValues = this.allValuesAcrossLayers(aes);
-                scale.domain(allValues);
-                //scale.domain(data.map(function(d) { return d.letter; }));
-            } else if (scaleDef.isTime()) {
-                min = this.statAcrossLayers(aes, "min");
-                max = this.statAcrossLayers(aes, "max");
-                if (isNaN(min)) {
-                    min = new Date(1970, 0, 1);
-                }
-                if (isNaN(max)) {
-                    max = new Date(Date.now());
-                }
-                scale.domain([min, max]).nice();
-            }
-        }
+ggjs.Renderer = (function (d3) {
+    var renderer = function (plotDef) {
+        this.renderer = {
+            plotDef: plotDef,
+            plot: null, // The element to draw to
+            xAxis: null,
+            yAxis: null,
+            scaleNameToD3Scale: {}, // Lookup to find D3 scale for scale name
+            datasetsRetrieved: {},
+            warnings: [],
+            defaultFillColor: "rgb(31, 119, 180)"
+        };
         
     };
 
-    prototype.setupXAxis = function () {
-        // Produces D3 x axis
+    var prototype = renderer.prototype;
+
+    // ----------
+    // Accessors
+    // ----------
+
+    prototype.plotDef = function (val) {
+        if (!arguments.length) return this.renderer.plotDef;
+        this.renderer.plotDef = val;
+        return this;
+    };
+
+    prototype.warnings = function (val) {
+        if (!arguments.length) return this.renderer.warnings;
+        this.renderer.warnings = val;
+        return this;
+    };
+
+    // End Accessors
+
+    prototype.warning = function (warning) {
+        // Adds a warning to the log
+        this.renderer.warnings.push(warning);
+    };
+
+    prototype.render = function () {
+        var this_ = this;
+        // Clear contents (so they disapper in the event of failed data load)
+        console.log("TODO: switch content remove to new renderer");
+        d3.select(this.plotDef().selector()).select("svg").remove();
+        // Fetch data then render plot
+        this.fetchData(function () { this_.renderPlot(); });
+    };
+
+    prototype.fetchData = function (finishedCallback) {
         var plotDef = this.plotDef(),
-            axis = d3.svg.axis()
-                .orient("bottom"),
-            axisDef = this.plotDef().axes().axis("x") || {},
-            scaleRef = axisDef.scaleName(),
-            scaleDef = plotDef.scales().scale(scaleRef),
-            scale = this.scale(scaleDef);
-
-        // ToDo: determine if domain has been manually set on x axis
-        // ToDo: account for facets
-        //x.domain(d3.extent(data, function(d) { return d.sepalWidth; })).nice();
-
-        // Set scale range
-        // ToDo: account for facets
-        switch (plotDef.coord()) {
-            case "cartesian":
-                // X scale range is always width of plot area
-                scale.range([0, plotDef.plotAreaWidth()]);
-                if (scaleDef.isOrdinal()) {
-                    scale.rangeRoundBands([0, plotDef.plotAreaWidth()], 0.1);
+            datasetNames = plotDef.data().names(),
+            loadData = function (url, datasetName, contentType, callback) {
+                var contentTypeLC = contentType ? contentType.toLowerCase() : contentType,
+                    dataset = plotDef.data().dataset(datasetName);
+                switch (contentTypeLC) {
+                    case "text/csv":
+                        d3.csv(url, function(err, res) {
+                            if (err) throw new Error("Error fetching CSV results: " + err.statusText);
+                            dataset.values(res);
+                            dataset.applyDataTypes();
+                            callback(null, res);
+                        });
+                        break;
+                    case "text/tsv":
+                    case "text/tab-separated-values":
+                        d3.tsv(url, function(err, res) {
+                            if (err) throw new Error("Error fetching TSV results: " + err.statusText);
+                            dataset.values(res);
+                            dataset.applyDataTypes();
+                            callback(null, res);
+                        });
+                        break;
+                    case "application/json":
+                        d3.json(url, function(err, res) {
+                            if (err) throw new Error("Error fetching JSON results: " + err.statusText);
+                            dataset.values(res);
+                            dataset.applyDataTypes();
+                            callback(null, res);
+                        });
+                        break;
+                    case "application/vnd.geo+json":
+                        d3.json(url, function(err, res) {
+                            if (err) throw new Error("Error fetching GEO JSON results: " + err.statusText);
+                            dataset.values(res);
+                            callback(null, res);
+                        });
+                        break;
+                    default:
+                        throw new Error("Don't know you to load data of type " + contentType);
                 }
-                break;
-            case "polar":
-                scale.range([0, 2 * Math.PI]);
-                if (scaleDef.isOrdinal()) {
-                    scale.rangeBands([0, 2 * Math.PI], 0);
+            },
+            q = queue(3),
+            i, datasetName, dataset;
+
+        // Queue all data held at url
+        for (i = 0; i < datasetNames.length; i++) {
+            datasetName = datasetNames[i];
+            dataset = plotDef.data().dataset(datasetName);
+            if (dataset && dataset.url()) {
+                q.defer(loadData, dataset.url(), datasetName, dataset.contentType());
+            }
+        }
+        q.awaitAll(function(error, results) {
+                if (error) {
+                    // ToDo: write error in place of chart?
+                    throw new Error("Error fetching data results: " + error.statusText);
                 }
-                break;
-            case "mercator":
-                console.log("ToDo: set up geo axis");
-                break;
-            default:
-                throw new Error("Don't know how to set axis range for co-ordinate type " + plotDef.coord());
-        }
-
-        this.setupAxisScale("x", scale, scaleDef);
-        axis.scale(scale);
-
-        axis.ticks(5);
-
-        this.xAxisScaleDef(scaleDef);
-        this.xAxis(axis);
-    };
-
-    prototype.setupYAxis = function () {
-        // Produces D3 y axis
-        var plotDef = this.plotDef(),
-            axis = d3.svg.axis()
-                .orient("left"),
-            axisDef = this.plotDef().axes().axis("y") || {},
-            scaleRef = axisDef.scaleName(),
-            scaleDef = plotDef.scales().scale(scaleRef),
-            scale = this.scale(scaleDef);
-
-        // ToDo: determine if domain has been manually set on y axis
-        // ToDo: account for facets
-        //y.domain(d3.extent(data, function(d) { return d.sepalLength; })).nice();
-        
-        // ToDo: account for facets
-        switch (plotDef.coord()) {
-            case "cartesian":
-                // Y scale range is height of plot area
-                scale.range([plotDef.plotAreaHeight(), 0]);
-                break;
-            case "polar":
-                // Y scale range is half height of plot area
-                scale.range([Math.floor(plotDef.plotAreaHeight() / 2), 0]);
-                break;
-            case "mercator":
-                console.log("ToDo: set up geo axis");
-                break;
-            default:
-                throw new Error("Don't know how to set axis range for co-ordinate type " + plotDef.coord());
-        }
-
-        this.setupAxisScale("y", scale, scaleDef);
-        axis.scale(scale);
-
-        axis.ticks(5);
-
-        this.yAxisScaleDef(scaleDef);
-        this.yAxis(axis);
-    };
-
-    prototype.scaleDef = function (scaleName) {
-        return this.plotDef().scales().scale(scaleName);
-    };
-
-    prototype.scale = function (scaleDef) {
-        // Produces D3 scale from ggjs scale definition
-        var scale = null;
-        scaleDef = scaleDef || ggjs.scale({});
-        switch (scaleDef.type()) {
-            case "linear":
-                scale = d3.scale.linear();
-                break;
-            case "ordinal":
-                scale = d3.scale.ordinal();
-                break;
-            case "pow":
-                scale = d3.scale.pow();
-                break;
-            case "time":
-                scale = d3.time.scale();
-                break;
-            case "category10":
-                scale = d3.scale.category10();
-                break;
-            default:
-                throw new Error("Unknow D3 scale type " + scaleDef.type());
-        }
-
-        if (scale === null) {
-            scale = d3.scale.linear();
-        }
-
-        return scale;
-    };
-
-
-    // --------
-    // Legends
-    // --------
-
-    function scaleLegend () {
-        // Legend attributes
-
-        // Scale
-        var _scale = null,
-            _layout = "horizontal",
-            _itemOffsetX = 0,   // Horizontal gap between items
-            _itemOffsetY = 10,  // Vertical gap between items
-            _itemRadius = Math.floor(_itemOffsetY / 2),
-            _itemMarkerLabelGap = 10;
-
-        // Legend function.
-        function legend (selection) {
-            selection.each(function (data) {
-                var legendContainer = d3.select(this);
-
-                legendContainer.selectAll(".ggjs-legend-item-marker")
-                        .data(data)
-                    .enter().append("circle")
-                        .attr("class", "ggjs-legend-item-marker")
-                        .attr("r", _itemRadius)
-                        // .attr("cx", 0)
-                        // .attr("cy", 0)
-                        .attr("cx", function (d, i) { return (i * _itemOffsetX) - _itemRadius; })
-                        .attr("cy", function (d, i) { return (i * _itemOffsetY) - _itemRadius; })
-                        .style("fill", function (d) { return _scale(d); })
-                        .style("stroke", "black");
-
-                legendContainer.selectAll(".ggjs-legend-item-label")
-                        .data(data)
-                    .enter().append("text")
-                        .attr("class", "ggjs-legend-item-label")
-                        .attr("x", function (d, i) { return (i * _itemOffsetX) + _itemMarkerLabelGap; })
-                        .attr("y", function (d, i) { return i * _itemOffsetY; })
-                        .text(function (d) { return d; });
-
-                // Add the label 'Legend' on enter
-                // containerDiv.selectAll('b')
-                //  .data([data])
-                //  .enter().append('b')
-                //  .text('Legend');
+                // Data loaded - continue rendering
+                finishedCallback();
             });
-        }
+    };
 
-        // Accessor methods
-
-        // Scale accessor
-        legend.scale = function (value) {
-            if (!arguments.length) { return _scale; }
-            _scale = value;
-            return legend;
-        };
-
-        // Y offset accessor
-        legend.itemOffsetX = function (value) {
-            if (!arguments.length) { return _itemOffsetX; }
-            _itemOffsetX = value;
-            return legend;
-        };
-
-        // Y offset accessor
-        legend.itemOffsetY = function (value) {
-            if (!arguments.length) { return _itemOffsetY; }
-            _itemOffsetY = value;
-            return legend;
-        };
-
-        // Radius accessor
-        legend.itemRadius = function (value) {
-            if (!arguments.length) { return _itemRadius; }
-            _itemRadius = value;
-            return legend;
-        };
-
-        return legend;
-    }
-
-    prototype.drawLegends = function () {
-        // ToDo: find the legends for all aes across all layers
-
-        // ToDo: combine aes if possible, like fill and shape
-        // Find rules to combine legends - e.g. if same fields
-        // are used for different aes, then legends can be combined.
-        // E.g. if 'country' field is used for aes 'shape' and 'fill'
-        // then draw a single legend for 'country' values adapting 
-        // the fill and shape of the markers
+    prototype.renderPlot = function () {
         var plotDef = this.plotDef(),
-            plot = this.renderer.plot,
-            layerDefs = plotDef.layers().asArray(),
-            legendX = 0,    // Cummalative legend offset 
-            legendY = 0,    // Cummalative legend offset 
-            itemOffsetX = 0,    // Horizontal gap between legend items
-            itemOffsetY = 18,   // Vertical gap between legend items
-            itemRadius = 5, // Radius of circle markers
-            titleHeight = 12,   // Height of legend title
-            i, j, layerDef, legendArea, legendBaseX, legendBaseY, 
-            scaleNamesLookup = {},
-            scaleNamesToDisplay = [],
-            legendData, legend, aesmappings, aesmapping, aes, scaleName, scale;
+            renderer,
+            plot;
 
-        // ToDo: legend position
-        switch ("top") {
-            case "top":
-                itemOffsetX = 100;
-                itemOffsetY = 0;
-                legendBaseX = Math.max(0, plotDef.plotAreaX() - itemOffsetY);
-                legendArea = plot.append("g")
-                    .attr("transform", "translate(" + legendBaseX + "," + plotDef.plotAreaY() + ")");
-                break;
-            // case "bottom":
-            // case "left":
-            // case "right": // Fall through to default for right
-            default:
-                itemOffsetX = 0;
-                itemOffsetY = 18;
-                legendBaseX = plotDef.plotAreaX() + (0.7 * plotDef.plotAreaWidth());
-                legendArea = plot.append("g")
-                    .attr("transform", "translate(" + legendBaseX + "," + plotDef.plotAreaY() + ")");
-                break;
+        if (plotDef.coord() === "mercator") {
+            renderer = new ggjs.LeafletRenderer(plotDef);
+        } else {
+            renderer = new ggjs.SVGRenderer(plotDef);
         }
 
-        // Look for scales to turn into legends
-        for (i = 0; i < layerDefs.length; i++) {
-            layerDef = layerDefs[i];
-            aesmappings = layerDef.aesmappings().asArray();
-
-            // console.log("aesmappings", aesmappings)
-            if (aesmappings) {
-                for (j = 0; j < aesmappings.length; j++) {
-                    aesmapping = aesmappings[j];
-                    // console.log(aesmapping)
-                    aes = aesmapping.aes();
-                    // Skip aesthetics which are already display as axis
-                    if (aes === "x" || aes === "y") {
-                        continue;
-                    }
-                    scaleName = aesmapping.scaleName();
-                    // console.log("aesmapping", aes, scaleName);
-                    if (scaleName !== null && typeof scaleNamesLookup[scaleName] === 'undefined') {
-                        scaleNamesToDisplay.push(scaleName);
-                        scaleNamesLookup[scaleName] = true;
-                    }
-                }
-            }
-        }
-
-        for (i = 0; i < scaleNamesToDisplay.length; i++) {
-            // ToDo: check type of scale
-            //   if ordinal: when setting up plot find the domain values
-            //          then look them up here
-            //   if quan: display box with range of values (gradient?)
-            scaleName = scaleNamesToDisplay[i];
-            scale = this.d3Scale(scaleName);
-            legendData = scale.domain();
-            // legendData = ["a", "b", "c"];
-            // console.log("scale: ", scaleNamesToDisplay[i]);
-            // find the scale
-            // scale = d3.scale.category20();
-            // scale.domain(legendData);
-
-            var lgnd = scaleLegend()
-                .itemOffsetX(itemOffsetX)
-                .itemOffsetY(itemOffsetY)
-                .itemRadius(itemRadius)
-                .scale(scale);
-
-            legend = legendArea.append("g")
-                .attr("transform", "translate(0," + legendY + ")")
-                .attr("class", "legend")
-                .data([legendData])
-                // .attr("transform","translate(50,30)")
-                .style("font-size","12px")
-                .call(lgnd);
-
-            // Set up offsets for next legend collection
-            legendY += titleHeight + legendData.length * itemOffsetY;
-        }
-
+        renderer.buildScales();
+        renderer.setupXAxis();
+        renderer.setupYAxis();
+        // TODO: merge setupGeo into constructor of SVGRenderer
+        // renderer.setupGeo();
+        renderer.drawAxes();
+        renderer.drawLayers();
+        renderer.drawLegends();
     };
 
     return renderer;

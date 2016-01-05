@@ -15,7 +15,6 @@
             global.ggjs = factory(d3, L);
         }
 })(typeof window !== "undefined" ? window : this, function (d3, L) {
+    // 'use strict';
     console.log("Put strict mode back in");
-    //'use strict';
     var ggjs = {};
-    console.log("leaflet", L);

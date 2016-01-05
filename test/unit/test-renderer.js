@@ -96,7 +96,7 @@ define(['../../lib/d3.js', 'ggjs'], function(d3, ggjs) {
                     }
                 ];
                 plotDef = ggjs.plot(spec);
-                renderer = ggjs.renderer(plotDef);
+                renderer = new ggjs.SVGRenderer(plotDef);
                 expect(renderer.getDataset(null)).not.toBe(null);
                 expect(renderer.getDataset(null)).not.toBe(undefined);
                 expect(renderer.getDataset(null).name()).toEqual("data");
@@ -107,13 +107,13 @@ define(['../../lib/d3.js', 'ggjs'], function(d3, ggjs) {
 
             it("should find min x value across layers", function() {
                 var plotDef = ggjs.plot(specMultiLayerDatasets),
-                    renderer = ggjs.renderer(plotDef);
+                    renderer = new ggjs.SVGRenderer(plotDef);
                 expect(renderer.statAcrossLayers("x", "min")).toEqual(0.5);
             });
 
             it("should find max x value across layers", function() {
                 var plotDef = ggjs.plot(specMultiLayerDatasets),
-                    renderer = ggjs.renderer(plotDef);
+                    renderer = new ggjs.SVGRenderer(plotDef);
                 expect(renderer.statAcrossLayers("x", "max")).toEqual(12.5);
             });
 
@@ -132,7 +132,7 @@ define(['../../lib/d3.js', 'ggjs'], function(d3, ggjs) {
                     }
                 ];
                 plotDef = ggjs.plot(spec);
-                renderer = ggjs.renderer(plotDef);
+                renderer = new ggjs.SVGRenderer(plotDef);
                 expect(renderer.statAcrossLayers("x", "max")).toEqual(2.5);
             });
 
@@ -189,7 +189,7 @@ define(['../../lib/d3.js', 'ggjs'], function(d3, ggjs) {
                     plotDef, renderer, vals;
 
                 plotDef = ggjs.plot(spec);
-                renderer = ggjs.renderer(plotDef);
+                renderer = new ggjs.SVGRenderer(plotDef);
                 vals = renderer.allValuesAcrossLayers("x");
                 expect(vals.sort()).toEqual(["a", "a", "a", "b", "c", "d"]);
             });
@@ -253,7 +253,7 @@ define(['../../lib/d3.js', 'ggjs'], function(d3, ggjs) {
                     plotDef, renderer, val;
 
                 plotDef = ggjs.plot(spec);
-                renderer = ggjs.renderer(plotDef);
+                renderer = new ggjs.SVGRenderer(plotDef);
                 
                 // Should sum up the values in the second layer to get
                 // max as it's a stacked data layer
@@ -283,7 +283,7 @@ define(['../../lib/d3.js', 'ggjs'], function(d3, ggjs) {
                         ]
                     },
                     plotDef = ggjs.plot(spec),
-                    renderer = ggjs.renderer(plotDef);
+                    renderer = new ggjs.SVGRenderer(plotDef);
                 expect(renderer.scaleDef("x").name()).toEqual("x");
             });
         });

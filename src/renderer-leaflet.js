@@ -1,5 +1,5 @@
 // Leaflet map renderer
-ggjs.LeafletRenderer = (function (d3, layerRendererPlugins) {
+ggjs.LeafletRenderer = (function (d3, layerRendererPlugins, L) {
     var leafletRenderer = function (plotDef) {
         this._plotDef = plotDef;
         var width = plotDef.width(),
@@ -145,4 +145,4 @@ ggjs.LeafletRenderer = (function (d3, layerRendererPlugins) {
     };
 
     return leafletRenderer;
-}(d3, ggjs.layerRendererPlugins));
+}(d3, ggjs.layerRendererPlugins, L));

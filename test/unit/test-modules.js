@@ -120,6 +120,10 @@ define(['../../lib/d3.js', 'ggjs'], function(d3, ggjs) {
 			expect(typeof ggjs.Renderer).toEqual("function");
 		});
 
+		it("should find the SVG Renderer constructor", function () {
+			expect(typeof ggjs.SVGRenderer).toEqual("function");
+		});
+
 		it("should find the Leaflet Renderer constructor", function () {
 			expect(typeof ggjs.LeafletRenderer).toEqual("function");
 		});
