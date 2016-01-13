@@ -1,6 +1,6 @@
 // Leaflet map renderer
 ggjs.LeafletRenderer = (function (d3, layerRendererPlugins, L) {
-    var leafletRenderer = function (plotDef) {
+    var leafletRenderer = function (selector, plotDef) {
         this._plotDef = plotDef;
         var width = plotDef.width(),
             height = plotDef.height(),
@@ -9,7 +9,8 @@ ggjs.LeafletRenderer = (function (d3, layerRendererPlugins, L) {
         if (typeof width === 'undefined' || width === null) {
             // Set width to parent container width
             try {
-                parentWidth = d3.select(plotDef.selector()).node().offsetWidth;
+                parentWidth = d3.select(selector).node().offsetWidth;
+                // parentWidth = d3.select(plotDef.selector()).node().offsetWidth;
             } catch (err) {
                 throw new Error("Couldn't find the width of the parent element."); 
             }
@@ -24,7 +25,8 @@ ggjs.LeafletRenderer = (function (d3, layerRendererPlugins, L) {
         }
 
         // Set height/width of div (needed for Leaflet)
-        elem = d3.select(plotDef.selector());
+        elem = d3.select(selector);
+        // elem = d3.select(plotDef.selector());
         mapElem = elem.append("div")
             .style("height", this._plotDef.height() + "px")
             .style("width", this._plotDef.width() + "px");

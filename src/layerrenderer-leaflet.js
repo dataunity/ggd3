@@ -1,3 +1,10 @@
+// TODO: Put these in Layer base class, or swap out
+// for option to set row data on data point (e.g. data-ggjs-rowdata)
+var geomDataAttrXField = "data-ggjs-x-field",
+    geomDataAttrXValue = "data-ggjs-x-value",
+    geomDataAttrYField = "data-ggjs-y-field",
+    geomDataAttrYValue = "data-ggjs-y-value";
+
 // Layer renderer plugin for Leaflet map tiles
 (function (L, layerRendererPlugins) {
     var rendererType = "leaflet",
@@ -262,6 +269,10 @@
                     .attr('cx', function(d) { return radius; })
                     .attr('cy', function(d) { return radius; })
                     .attr('r', function(d) { return radius; })
+                    .attr(geomDataAttrXField, latField)
+                    .attr(geomDataAttrXValue, function (d) { return d[latField]; })
+                    .attr(geomDataAttrYField, longField)
+                    .attr(geomDataAttrYValue, function (d) { return d[longField]; })
                     .attr('class', 'city');
                     // .on('mouseover', function(d) {
                     //     d3.select(this).classed('highlight', true);

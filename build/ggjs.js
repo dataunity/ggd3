@@ -1049,6 +1049,13 @@ ggjs.layerRendererPlugins = (function () {
         getLayerRenderer: getLayerRenderer
     };
 }());
+// TODO: Put these in Layer base class, or swap out
+// for option to set row data on data point (e.g. data-ggjs-rowdata)
+var geomDataAttrXField = "data-ggjs-x-field",
+    geomDataAttrXValue = "data-ggjs-x-value",
+    geomDataAttrYField = "data-ggjs-y-field",
+    geomDataAttrYValue = "data-ggjs-y-value";
+
 // Layer renderer plugin for Leaflet map tiles
 (function (L, layerRendererPlugins) {
     var rendererType = "leaflet",
@@ -1313,6 +1320,10 @@ ggjs.layerRendererPlugins = (function () {
                     .attr('cx', function(d) { return radius; })
                     .attr('cy', function(d) { return radius; })
                     .attr('r', function(d) { return radius; })
+                    .attr(geomDataAttrXField, latField)
+                    .attr(geomDataAttrXValue, function (d) { return d[latField]; })
+                    .attr(geomDataAttrYField, longField)
+                    .attr(geomDataAttrYValue, function (d) { return d[longField]; })
                     .attr('class', 'city');
                     // .on('mouseover', function(d) {
                     //     d3.select(this).classed('highlight', true);
@@ -2033,7 +2044,7 @@ ggjs.D3RendererBase = (function (d3) {
 }(d3));
 // SVG renderer
 ggjs.SVGRenderer = (function (d3, layerRendererPlugins) {
-    var svgRenderer = function (plotDef) {
+    var svgRenderer = function (selector, plotDef) {
         this._plotDef = plotDef;
 
         // Width: autoset width if width is missing
@@ -2042,7 +2053,8 @@ ggjs.SVGRenderer = (function (d3, layerRendererPlugins) {
         if (typeof width === 'undefined' || width === null) {
             // Set width to parent container width
             try {
-                parentWidth = d3.select(this._plotDef.selector()).node().offsetWidth;
+                parentWidth = d3.select(selector).node().offsetWidth;
+                // parentWidth = d3.select(this._plotDef.selector()).node().offsetWidth;
             } catch (err) {
                 throw new Error("Couldn't find the width of the parent element."); 
             }
@@ -2070,10 +2082,11 @@ ggjs.SVGRenderer = (function (d3, layerRendererPlugins) {
         this.geo = {};
 
         // Clear the current contents
-        d3.select(plotDef.selector()).html("");
+        d3.select(selector).html("");
+        // d3.select(plotDef.selector()).html("");
 
         // Add the main SVG element
-        plotSVG = d3.select(plotDef.selector())
+        plotSVG = d3.select(selector)
             .append("svg")
                 .attr("width", plotDef.width())
                 .attr("height", plotDef.height());
@@ -3080,7 +3093,7 @@ ggjs.SVGRenderer = (function (d3, layerRendererPlugins) {
 }(d3, ggjs.layerRendererPlugins));
 // Leaflet map renderer
 ggjs.LeafletRenderer = (function (d3, layerRendererPlugins, L) {
-    var leafletRenderer = function (plotDef) {
+    var leafletRenderer = function (selector, plotDef) {
         this._plotDef = plotDef;
         var width = plotDef.width(),
             height = plotDef.height(),
@@ -3089,7 +3102,8 @@ ggjs.LeafletRenderer = (function (d3, layerRendererPlugins, L) {
         if (typeof width === 'undefined' || width === null) {
             // Set width to parent container width
             try {
-                parentWidth = d3.select(plotDef.selector()).node().offsetWidth;
+                parentWidth = d3.select(selector).node().offsetWidth;
+                // parentWidth = d3.select(plotDef.selector()).node().offsetWidth;
             } catch (err) {
                 throw new Error("Couldn't find the width of the parent element."); 
             }
@@ -3104,7 +3118,8 @@ ggjs.LeafletRenderer = (function (d3, layerRendererPlugins, L) {
         }
 
         // Set height/width of div (needed for Leaflet)
-        elem = d3.select(plotDef.selector());
+        elem = d3.select(selector);
+        // elem = d3.select(plotDef.selector());
         mapElem = elem.append("div")
             .style("height", this._plotDef.height() + "px")
             .style("width", this._plotDef.width() + "px");
@@ -3229,8 +3244,9 @@ ggjs.LeafletRenderer = (function (d3, layerRendererPlugins, L) {
 
 
 ggjs.Renderer = (function (d3) {
-    var renderer = function (plotDef) {
+    var renderer = function (selector, plotDef) {
         this.renderer = {
+            selector: selector,
             plotDef: plotDef,
             plot: null, // The element to draw to
             xAxis: null,
@@ -3255,6 +3271,12 @@ ggjs.Renderer = (function (d3) {
         return this;
     };
 
+    prototype.selector = function (val) {
+        if (!arguments.length) return this.renderer.selector;
+        this.renderer.selector = val;
+        return this;
+    };
+
     prototype.warnings = function (val) {
         if (!arguments.length) return this.renderer.warnings;
         this.renderer.warnings = val;
@@ -3272,7 +3294,8 @@ ggjs.Renderer = (function (d3) {
         var this_ = this;
         // Clear contents (so they disapper in the event of failed data load)
         console.log("TODO: switch content remove to new renderer");
-        d3.select(this.plotDef().selector()).select("svg").remove();
+        d3.select(this.selector()).select("svg").remove();
+        // d3.select(this.plotDef().selector()).select("svg").remove();
         // Fetch data then render plot
         this.fetchData(function () { this_.renderPlot(); });
     };
@@ -3343,13 +3366,14 @@ ggjs.Renderer = (function (d3) {
 
     prototype.renderPlot = function () {
         var plotDef = this.plotDef(),
+            selector = this.selector(),
             renderer,
             plot;
 
         if (plotDef.coord() === "mercator") {
-            renderer = new ggjs.LeafletRenderer(plotDef);
+            renderer = new ggjs.LeafletRenderer(selector, plotDef);
         } else {
-            renderer = new ggjs.SVGRenderer(plotDef);
+            renderer = new ggjs.SVGRenderer(selector, plotDef);
         }
 
         renderer.buildScales();
@@ -3365,10 +3389,10 @@ ggjs.Renderer = (function (d3) {
     return renderer;
 })(d3);
 
-ggjs.renderer = function(s) {
-    return new ggjs.Renderer(s);
+ggjs.renderer = function (selector, spec) {
+    var plotDef = ggjs.plot(spec);
+    return new ggjs.Renderer(selector, plotDef);
 };
-
 ggjs.dataHelper = (function (d3) {
     var datatableMin = function (datatable, field) {
             // Finds the min value of the field in the datatable

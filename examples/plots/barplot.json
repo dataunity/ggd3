@@ -1,5 +1,4 @@
 {
-    "selector": "#chart",
     "coord": "cartesian",
     "height": 400,
     "data": [

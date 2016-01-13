@@ -5,13 +5,16 @@
         <link href="css/site.css" rel="stylesheet" />
         <link href="../css/theme/default/ggjs-0.0.1.css" rel="stylesheet" />
 
+        <link rel="stylesheet" type="text/css" href="../lib/leaflet/leaflet.css">
+
         <!-- ToDo: remove this dependency or package into ggjs (see ggjs.renderer.render() method) -->
         <script src="http://d3js.org/queue.v1.min.js"></script>
 
         <script src="../lib/d3.js" charset="utf-8"></script>
         <script src="../lib/d3.geo.tile.v0.min.js"></script>
         <script src="../lib/topojson.v1.min.js"></script>
-        <script src="../ggjs-0.0.1.js" charset="utf-8"></script>
+        <script src="../lib/leaflet/leaflet.js"></script>
+        <script src="../build/ggjs.js" charset="utf-8"></script>
 
         <!-- JQuery: only used to help with this page, not needed for ggjs -->
         <script src="lib/jquery-1.11.1.js" charset="utf-8"></script>
@@ -66,7 +69,7 @@
         <div class="container">
             <div id="map" class="chart-panel"></div>
             <div class="results-panel">
-                <div id="map-text" class="results">Hover over the chart</div>
+                <div id="map-text" class="results">Scroll to London and hover over the chart</div>
             </div>
         </div>
         <script>
@@ -76,15 +79,14 @@
                 "Widget C": "Very popular with users"
             }
 
-            function drawPlot (spec) {
+            function drawPlot (selector, spec) {
                 var plotDef, renderer, i;
                 if (spec == null) {
                     $("#feedback").text("No spec for the requested chart type.");
                 } else {
                     $("#feedback").text("");
                 }
-                plotDef = ggjs.plot(spec);
-                renderer = ggjs.renderer(plotDef);
+                renderer = ggjs.renderer(selector, spec);
                 renderer.render();
                 // ToDo: warnings wont work as rendering is async
                 // if (renderer.warnings() && renderer.warnings().length > 0) {
@@ -98,7 +100,7 @@
             $(document).ready(function () {
                 $.getJSON("plots/barplot.json")
                     .then(function (spec) {
-                        drawPlot(spec);
+                        drawPlot("#chart", spec);
 
                         // ToDo: implement promises for rendering so
                         // timeout can be removed
@@ -130,7 +132,7 @@
 
                 $.getJSON("plots/mappoint.json")
                     .then(function (spec) {
-                        drawPlot(spec);
+                        drawPlot("#map", spec);
 
                         // ToDo: implement promises for rendering so
                         // timeout can be removed

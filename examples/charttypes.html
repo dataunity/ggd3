@@ -15,7 +15,6 @@
         <script src="../lib/topojson.v1.min.js"></script>
         <script src="../lib/leaflet/leaflet.js"></script>
         <script src="../build/ggjs.js" charset="utf-8"></script>
-        <!--<script src="../ggjs-0.0.1.js" charset="utf-8"></script>-->
 
         <!-- JQuery: only used to help with this page, not needed for ggjs -->
         <script src="lib/jquery-1.11.1.js" charset="utf-8"></script>
@@ -85,7 +84,6 @@
                 switch (chartType) {
                     case "timeseries":
                         return {
-                            "selector": "#chart",
                             "coord": "cartesian",
                             // "width": 500,
                             "height": 400,
@@ -122,7 +120,6 @@
                         break;
                     case "line":
                         return {
-                            "selector": "#chart",
                             "coord": "cartesian",
                             // "width": 500,
                             "height": 400,
@@ -159,7 +156,6 @@
                         break;
                     case "scatterplot":
                         return {
-                            "selector": "#chart",
                             "coord": "cartesian",
                             // "width": 500,
                             "height": 400,
@@ -198,7 +194,6 @@
 
                     case "bar":
                         return {
-                            "selector": "#chart",
                             "coord": "cartesian",
                             // "width": 500,
                             "height": 400,
@@ -245,7 +240,6 @@
 
                     case "stackedbar":
                         return {
-                            "selector": "#chart",
                             "coord": "cartesian",
                             // "width": 500,
                             "height": 400,
@@ -284,7 +278,6 @@
 
                     case "coxcomb":
                         return {
-                            "selector": "#chart",
                             "coord": "polar",
                             // "width": 500,
                             "height": 400,
@@ -321,7 +314,6 @@
 
                     case "map":
                         return {
-                            "selector": "#chart",
                             "coord": "mercator",
                             // "width": 500,
                             "height": 400,
@@ -369,7 +361,6 @@
                         break;
                     case "geojson":
                         return {
-                            "selector": "#chart",
                             "coord": "mercator",
                             "width": 800,
                             "height": 400,
@@ -420,14 +411,14 @@
 
             function drawChart (chartType) {
                 var spec = chartSpec(chartType),
+                    selector = "#chart",
                     plotDef, renderer, i;
                 if (spec == null) {
                     $("#feedback").text("No spec for the requested chart type.");
                 } else {
                     $("#feedback").text("");
                 }
-                plotDef = ggjs.plot(spec);
-                renderer = ggjs.renderer(plotDef);
+                renderer = ggjs.renderer(selector, spec);
                 renderer.render();
                 // ToDo: warnings wont work as rendering is async
                 // if (renderer.warnings() && renderer.warnings().length > 0) {

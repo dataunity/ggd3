@@ -1,6 +1,6 @@
 // SVG renderer
 ggjs.SVGRenderer = (function (d3, layerRendererPlugins) {
-    var svgRenderer = function (plotDef) {
+    var svgRenderer = function (selector, plotDef) {
         this._plotDef = plotDef;
 
         // Width: autoset width if width is missing
@@ -9,7 +9,8 @@ ggjs.SVGRenderer = (function (d3, layerRendererPlugins) {
         if (typeof width === 'undefined' || width === null) {
             // Set width to parent container width
             try {
-                parentWidth = d3.select(this._plotDef.selector()).node().offsetWidth;
+                parentWidth = d3.select(selector).node().offsetWidth;
+                // parentWidth = d3.select(this._plotDef.selector()).node().offsetWidth;
             } catch (err) {
                 throw new Error("Couldn't find the width of the parent element."); 
             }
@@ -37,10 +38,11 @@ ggjs.SVGRenderer = (function (d3, layerRendererPlugins) {
         this.geo = {};
 
         // Clear the current contents
-        d3.select(plotDef.selector()).html("");
+        d3.select(selector).html("");
+        // d3.select(plotDef.selector()).html("");
 
         // Add the main SVG element
-        plotSVG = d3.select(plotDef.selector())
+        plotSVG = d3.select(selector)
             .append("svg")
                 .attr("width", plotDef.width())
                 .attr("height", plotDef.height());

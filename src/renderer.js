@@ -1,8 +1,9 @@
 
 
 ggjs.Renderer = (function (d3) {
-    var renderer = function (plotDef) {
+    var renderer = function (selector, plotDef) {
         this.renderer = {
+            selector: selector,
             plotDef: plotDef,
             plot: null, // The element to draw to
             xAxis: null,
@@ -27,6 +28,12 @@ ggjs.Renderer = (function (d3) {
         return this;
     };
 
+    prototype.selector = function (val) {
+        if (!arguments.length) return this.renderer.selector;
+        this.renderer.selector = val;
+        return this;
+    };
+
     prototype.warnings = function (val) {
         if (!arguments.length) return this.renderer.warnings;
         this.renderer.warnings = val;
@@ -44,7 +51,8 @@ ggjs.Renderer = (function (d3) {
         var this_ = this;
         // Clear contents (so they disapper in the event of failed data load)
         console.log("TODO: switch content remove to new renderer");
-        d3.select(this.plotDef().selector()).select("svg").remove();
+        d3.select(this.selector()).select("svg").remove();
+        // d3.select(this.plotDef().selector()).select("svg").remove();
         // Fetch data then render plot
         this.fetchData(function () { this_.renderPlot(); });
     };
@@ -115,13 +123,14 @@ ggjs.Renderer = (function (d3) {
 
     prototype.renderPlot = function () {
         var plotDef = this.plotDef(),
+            selector = this.selector(),
             renderer,
             plot;
 
         if (plotDef.coord() === "mercator") {
-            renderer = new ggjs.LeafletRenderer(plotDef);
+            renderer = new ggjs.LeafletRenderer(selector, plotDef);
         } else {
-            renderer = new ggjs.SVGRenderer(plotDef);
+            renderer = new ggjs.SVGRenderer(selector, plotDef);
         }
 
         renderer.buildScales();
@@ -137,6 +146,7 @@ ggjs.Renderer = (function (d3) {
     return renderer;
 })(d3);
 
-ggjs.renderer = function(s) {
-    return new ggjs.Renderer(s);
+ggjs.renderer = function (selector, spec) {
+    var plotDef = ggjs.plot(spec);
+    return new ggjs.Renderer(selector, plotDef);
 };

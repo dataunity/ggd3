@@ -11,7 +11,8 @@
         <script src="../lib/d3.js" charset="utf-8"></script>
         <script src="../lib/d3.geo.tile.v0.min.js"></script>
         <script src="../lib/topojson.v1.min.js"></script>
-        <script src="../ggjs-0.0.1.js" charset="utf-8"></script>
+        <script src="../lib/leaflet/leaflet.js"></script>
+        <script src="../build/ggjs.js" charset="utf-8"></script>
 
         <!-- JQuery: only used to help with this page, not needed for ggjs -->
         <script src="lib/jquery-1.11.1.js" charset="utf-8"></script>
@@ -46,8 +47,7 @@
                 // Single item updating
                 $.getJSON("plots/realtimebarplot.json")
                     .then(function (spec) {
-                        plotDef = ggjs.plot(spec);
-                        renderer = ggjs.renderer(plotDef);
+                        renderer = ggjs.renderer("#chart", spec);
                         renderer.render();
 
                         // Simulate realtime data being collected
@@ -56,9 +56,6 @@
                             var latestData = getLatestData();
                             renderer.plotDef().data().dataset("data").values(latestData);
                             renderer.renderPlot();
-                            // console.log(renderer.plotDef().data().dataset("data").values())
-                            // console.log(renderer.plotDef().data())
-                            // renderer.plotDef().data().values();
                         }, 700);
                     })
                     .fail(function (jqxhr, textStatus, error) {
@@ -70,11 +67,9 @@
                     .then(function (spec) {
                         var interval = 1,
                             accumulatedData = [];
-                        spec.selector = "#chart2";
                         accumulatedData = [getLatestDataInteval(interval++)];
                         spec.data[0].values = accumulatedData;
-                        plotDef = ggjs.plot(spec);
-                        rendererAcc = ggjs.renderer(plotDef);
+                        rendererAcc = ggjs.renderer("#chart2", spec);
                         rendererAcc.render();
 
                         // Simulate realtime data being collected
@@ -88,12 +83,7 @@
                             }
                             
                             rendererAcc.plotDef().data().dataset("data").values(accumulatedData);
-                            // renderer.plotDef().data().dataset("data").values().push(latestData);
                             rendererAcc.renderPlot();
-                            // console.log(renderer.plotDef().data().dataset("data").values())
-                            // console.log(renderer.plotDef().data().dataset("data").values())
-                            // console.log(renderer.plotDef().data())
-                            // renderer.plotDef().data().values();
                         }, 700);
                     })
                     .fail(function (jqxhr, textStatus, error) {

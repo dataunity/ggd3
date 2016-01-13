@@ -1,6 +1,7 @@
 define(['../../lib/d3.js', 'ggjs'], function(d3, ggjs) {
     describe("Module: ggjs.Renderer", function() {
-        var specOneDatasetNoLayers = {
+        var selector = "#chart",
+            specOneDatasetNoLayers = {
                 "selector": "#chart",
                 "coord": "cartesian",
                 "width": 400,
@@ -96,7 +97,7 @@ define(['../../lib/d3.js', 'ggjs'], function(d3, ggjs) {
                     }
                 ];
                 plotDef = ggjs.plot(spec);
-                renderer = new ggjs.SVGRenderer(plotDef);
+                renderer = new ggjs.SVGRenderer(selector, plotDef);
                 expect(renderer.getDataset(null)).not.toBe(null);
                 expect(renderer.getDataset(null)).not.toBe(undefined);
                 expect(renderer.getDataset(null).name()).toEqual("data");
@@ -107,13 +108,13 @@ define(['../../lib/d3.js', 'ggjs'], function(d3, ggjs) {
 
             it("should find min x value across layers", function() {
                 var plotDef = ggjs.plot(specMultiLayerDatasets),
-                    renderer = new ggjs.SVGRenderer(plotDef);
+                    renderer = new ggjs.SVGRenderer(selector, plotDef);
                 expect(renderer.statAcrossLayers("x", "min")).toEqual(0.5);
             });
 
             it("should find max x value across layers", function() {
                 var plotDef = ggjs.plot(specMultiLayerDatasets),
-                    renderer = new ggjs.SVGRenderer(plotDef);
+                    renderer = new ggjs.SVGRenderer(selector, plotDef);
                 expect(renderer.statAcrossLayers("x", "max")).toEqual(12.5);
             });
 
@@ -132,7 +133,7 @@ define(['../../lib/d3.js', 'ggjs'], function(d3, ggjs) {
                     }
                 ];
                 plotDef = ggjs.plot(spec);
-                renderer = new ggjs.SVGRenderer(plotDef);
+                renderer = new ggjs.SVGRenderer(selector, plotDef);
                 expect(renderer.statAcrossLayers("x", "max")).toEqual(2.5);
             });
 
@@ -189,7 +190,7 @@ define(['../../lib/d3.js', 'ggjs'], function(d3, ggjs) {
                     plotDef, renderer, vals;
 
                 plotDef = ggjs.plot(spec);
-                renderer = new ggjs.SVGRenderer(plotDef);
+                renderer = new ggjs.SVGRenderer(selector, plotDef);
                 vals = renderer.allValuesAcrossLayers("x");
                 expect(vals.sort()).toEqual(["a", "a", "a", "b", "c", "d"]);
             });
@@ -253,7 +254,7 @@ define(['../../lib/d3.js', 'ggjs'], function(d3, ggjs) {
                     plotDef, renderer, val;
 
                 plotDef = ggjs.plot(spec);
-                renderer = new ggjs.SVGRenderer(plotDef);
+                renderer = new ggjs.SVGRenderer(selector, plotDef);
                 
                 // Should sum up the values in the second layer to get
                 // max as it's a stacked data layer
@@ -283,7 +284,7 @@ define(['../../lib/d3.js', 'ggjs'], function(d3, ggjs) {
                         ]
                     },
                     plotDef = ggjs.plot(spec),
-                    renderer = new ggjs.SVGRenderer(plotDef);
+                    renderer = new ggjs.SVGRenderer(selector, plotDef);
                 expect(renderer.scaleDef("x").name()).toEqual("x");
             });
         });

@@ -1,5 +1,4 @@
 {
-    "selector": "#map",
     "coord": "mercator",
     "height": 400,
     "padding": {"left":30, "top":10, "bottom":30, "right":10},
