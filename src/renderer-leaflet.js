@@ -34,6 +34,7 @@ ggjs.LeafletRenderer = (function (d3, layerRendererPlugins, L) {
         this._map = new L.Map(mapElem.node(), {center: [37.8, -96.9], zoom: 4}); // US
     };
 
+    // var prototype = ggjs.util.extend(leafletRenderer.prototype, ggjs.D3RendererBase.prototype);
     var prototype = leafletRenderer.prototype;
 
     prototype.plotDef = function (val) {

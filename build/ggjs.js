@@ -1280,6 +1280,7 @@ var geomDataAttrXField = "data-ggjs-x-field",
                 this._data = data;
                 this._latField = latField;
                 this._longField = longField;
+                this._bounds = new L.LatLngBounds([]);
             },
 
             onAdd: function(map) {
@@ -1288,12 +1289,15 @@ var geomDataAttrXField = "data-ggjs-x-field",
                 var div = d3.select(map.getPanes().overlayPane),
                     svg = div.selectAll('svg.point').data(this._data),
                     latField = this._latField,
-                    longField = this._longField;
+                    longField = this._longField,
+                    allLatLongs = [];
 
                 // Stores the latitude and longitude of each city
                 this._data.forEach(function(d) {
                     d.LatLng = new L.LatLng(+d[latField], +d[longField]);
+                    allLatLongs.push(d.LatLng);
                 });
+                this._bounds = new L.LatLngBounds(allLatLongs);
 
                 // Create a scale for the population
                 // TODO: put in scale for size
@@ -1427,7 +1431,11 @@ var geomDataAttrXField = "data-ggjs-x-field",
             //dataset = plotDef.data().dataset(datasetName),
             values = dataset.values();
 
-        map.addLayer(new D3Layer(values, xField, yField));
+        // TODO: should fit bounds across all map layers
+        // TODO: should check whether auto fit bounds is enabled
+        var mapLayer = new D3Layer(values, xField, yField);
+        map.addLayer(mapLayer);
+        map.fitBounds(mapLayer._bounds);
     };
 
     prototype.onRemove = function (map) {
@@ -3127,6 +3135,7 @@ ggjs.LeafletRenderer = (function (d3, layerRendererPlugins, L) {
         this._map = new L.Map(mapElem.node(), {center: [37.8, -96.9], zoom: 4}); // US
     };
 
+    // var prototype = ggjs.util.extend(leafletRenderer.prototype, ggjs.D3RendererBase.prototype);
     var prototype = leafletRenderer.prototype;
 
     prototype.plotDef = function (val) {
